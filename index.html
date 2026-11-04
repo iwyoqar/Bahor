@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bahor — Turar-joy majmuasi</title>
+  <meta name="description" content="Bahor turar-joy majmuasi (Prestige Light House): 3D bino, qavatlar rejasi, xonadonlar maydoni va narxlari.">
+  <meta name="theme-color" content="#14161a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314161a'/%3E%3Cpath d='M14 50V24l18-12 18 12v26H38V36H26v14z' fill='%23d4b46a'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./js/vendor/three/three.module.min.js",
+      "three/addons/": "./js/vendor/three/addons/"
+    }
+  }
+  </script>
+</head>
+<body data-phase="day">
+  <div id="scene"></div>
+  <div id="labels"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 52V24L32 9l22 15v28H40V36H24v16z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M28 52V40h8v12" fill="currentColor"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">BAHOR</div>
+        <div class="brand-sub"><span data-t="subtitle"></span><span class="sep"> · </span><span data-t="by"></span></div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="chip" id="btn-gallery"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z M4 15l4-4 4 4 3-3 5 5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="15.5" cy="9" r="1.6" fill="currentColor"/></svg><span data-t="gallery"></span></button>
+      <button class="chip" id="btn-lang">RU</button>
+    </div>
+  </header>
+
+  <aside id="floor-rail">
+    <div class="rail-title" data-t="chooseFloor"></div>
+    <div class="rail-list"></div>
+  </aside>
+
+  <section id="floor-panel" aria-live="polite">
+    <div class="fp-head">
+      <div>
+        <div class="fp-title" id="fp-title"></div>
+        <div class="fp-sub" id="fp-sub"></div>
+      </div>
+      <div class="fp-head-actions">
+        <button class="btn ghost small" id="fp-plan" data-t="plan2d"></button>
+        <button class="icon-btn" id="fp-close" aria-label="close">✕</button>
+      </div>
+    </div>
+    <div class="fp-body" id="fp-body">
+      <div class="fp-prices" id="fp-prices"></div>
+      <div class="fp-hint" data-t="selectApt"></div>
+      <div class="fp-list" id="fp-list"></div>
+    </div>
+    <div class="fp-detail" id="fp-detail"></div>
+  </section>
+
+  <div id="tooltip" role="tooltip"></div>
+
+  <div id="time-widget">
+    <div class="tw-top">
+      <div class="tw-clock" id="time-clock">--:--</div>
+      <div class="tw-phase" id="time-phase"></div>
+      <button class="tw-live" id="time-live"><i></i><span data-t="live"></span></button>
+    </div>
+    <input type="range" id="time-slider" min="0" max="1439" step="5" value="720" aria-label="time">
+    <div class="tw-scale"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+  </div>
+
+  <div id="hint"><span class="dot"></span><span id="hint-text"></span></div>
+
+  <div class="cta">
+    <div class="cta-parking"><small data-t="parkingPrice"></small><b id="parking-price"></b></div>
+    <a class="btn gold" id="cta-call" href="#"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z" fill="currentColor"/></svg><span></span></a>
+  </div>
+
+  <div id="plan-modal" class="modal">
+    <div class="pm-head">
+      <div class="pm-title" id="pm-title"></div>
+      <div class="pm-tools">
+        <div class="seg">
+          <button class="pm-mode on" data-mode="scheme" data-t="scheme"></button>
+          <button class="pm-mode" data-mode="drawing" data-t="drawing"></button>
+        </div>
+        <button class="icon-btn" id="pm-reset" aria-label="reset">⤢</button>
+        <button class="icon-btn" id="pm-close" aria-label="close">✕</button>
+      </div>
+    </div>
+    <div id="plan-host"></div>
+    <div class="pm-foot" data-t="zoomHint"></div>
+  </div>
+
+  <div id="gallery-modal" class="modal">
+    <button class="icon-btn gal-close" id="gal-close" aria-label="close">✕</button>
+    <button class="gal-nav prev" id="gal-prev" aria-label="prev">‹</button>
+    <img id="gal-img" alt="Bahor render">
+    <button class="gal-nav next" id="gal-next" aria-label="next">›</button>
+    <div class="gal-count" id="gal-count"></div>
+  </div>
+
+  <div id="loader">
+    <div class="ld-inner">
+      <div class="ld-name">BAHOR</div>
+      <div class="ld-sub">Prestige Light House</div>
+      <div class="ld-track"><div id="loader-bar"></div></div>
+      <div class="ld-msg" id="loader-msg"></div>
+    </div>
+  </div>
+
+  <noscript>Saytni ko'rish uchun JavaScript yoqilgan bo'lishi kerak.</noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

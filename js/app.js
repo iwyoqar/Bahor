@@ -8,6 +8,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { CONFIG, floorBase, floorHeight } from './config.js';
 import { buildBuilding, buildInterior, createMaterials, extrudePolys, toWorld } from './building.js';
+import { buildFurnishing, setFurnishingNight } from './furniture.js';
 import { buildEnvironment } from './environment.js';
 import { createLighting } from './lighting.js';
 import { createUI } from './ui.js';
@@ -63,14 +64,15 @@ async function main() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(isMobile ? 50 : 38, innerWidth / innerHeight, 0.5, 9000);
 
+  // fixed viewing angle: no orbiting or panning, only zoom (towards the cursor) within limits
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.07;
-  controls.minDistance = 18;
-  controls.maxDistance = 360;
-  controls.maxPolarAngle = Math.PI * 0.475;
-  controls.screenSpacePanning = true;
+  controls.dampingFactor = 0.08;
+  controls.enableRotate = false;
+  controls.enablePan = false;
+  controls.zoomToCursor = true;
   controls.zoomSpeed = 0.9;
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 
   // ------------------------------------------------ scene content
   const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e4);
@@ -82,6 +84,9 @@ async function main() {
   const bld = buildBuilding(floors, mats);
   scene.add(bld.root);
   setProgress(0.9); await nextFrame();
+  // soft light for the furnished interior of a selected floor (stronger at night)
+  const interiorLight = new THREE.HemisphereLight(0xfff1dc, 0x9c8b74, 0);
+  scene.add(interiorLight);
 
   // highlight overlays per floor
   const hlMat = new THREE.MeshBasicMaterial({ color: 0xe0a84a, transparent: true, opacity: 0.42, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6, side: THREE.FrontSide, fog: false });
@@ -133,6 +138,7 @@ async function main() {
     bloom.strength = 0.15 + 0.42 * night;
     bloom.threshold = 0.92 - 0.14 * night;
     if (bld.root.userData.signMat) bld.root.userData.signMat.emissiveIntensity = 0.2 + 1.6 * night;
+    setFurnishingNight(night);
     envNight = night;
     ui.setClock(timeState.minutes, phaseOf(s.elevation, h < 12), timeState.live);
   }
@@ -162,9 +168,7 @@ async function main() {
     const a = m.userData.apt;
     const on = (hoveredApt && hoveredApt.id === a.id) || (selectedApt && selectedApt.id === a.id);
     const sel = selectedApt && selectedApt.id === a.id;
-    m.material.emissive.set(sel ? 0xd6a84a : on ? 0xf0c77a : m.userData.baseColor);
-    m.material.emissiveIntensity = sel ? 0.85 : on ? 0.6 : 0.05;
-    m.position.y = on ? 0.04 : 0;
+    m.material.opacity = sel ? 0.34 : on ? 0.22 : 0;
     const lbl = interior.labels.get(a.id);
     if (lbl) lbl.element.classList.toggle('on', !!on);
   }
@@ -180,7 +184,7 @@ async function main() {
   function getInterior(fl) {
     if (interiors.has(fl)) return interiors.get(fl);
     const fd = byFloor.get(fl);
-    const it = buildInterior(fd);
+    const it = buildInterior(fd, buildFurnishing);
     const labels = new Map();
     fd.apartments.forEach((a) => {
       const div = document.createElement('div');
@@ -200,6 +204,36 @@ async function main() {
     return it;
   }
 
+  // ------------------------------------------------ fixed camera angles
+  const homeTarget = new THREE.Vector3(0, 11, 4);
+  const homeOffset = isMobile ? new THREE.Vector3(82, 35, 138) : new THREE.Vector3(78, 23, 114);
+  const floorOffset = isMobile ? new THREE.Vector3(8, 150, 82) : new THREE.Vector3(16, 74, 58);
+  const VIEWS = {
+    home: { dir: homeOffset.clone().normalize(), dist: homeOffset.length(), min: isMobile ? 62 : 52, max: homeOffset.length() * 1.08,
+      bmin: new THREE.Vector3(-38, 2, -24), bmax: new THREE.Vector3(38, 26, 30) },
+    floor: { dir: floorOffset.clone().normalize(), dist: floorOffset.length(), min: isMobile ? 40 : 26, max: floorOffset.length() * 1.1,
+      bmin: new THREE.Vector3(-38, 0, -24), bmax: new THREE.Vector3(38, 40, 26) },
+  };
+  let view = VIEWS.home;
+  let viewHome = homeTarget.clone();
+  function useView(v, home) {
+    view = v; viewHome = home.clone();
+    controls.minDistance = v.min; controls.maxDistance = v.max;
+  }
+  const tmpV = new THREE.Vector3();
+  function enforceView(dt) {
+    if (anim.active) return;
+    const t = controls.target;
+    t.clamp(view.bmin, view.bmax);
+    if (view === VIEWS.floor) t.y = viewHome.y;
+    let d = camera.position.distanceTo(t);
+    d = Math.min(Math.max(d, view.min), view.max);
+    // when zoomed out, drift back to the default framing
+    const k = Math.min(1, Math.max(0, (d - (view.min + 0.7 * (view.max - view.min))) / (0.3 * (view.max - view.min))));
+    if (k > 0) t.lerp(viewHome, Math.min(1, k * dt * 4));
+    camera.position.copy(tmpV.copy(view.dir).multiplyScalar(d).add(t));
+  }
+
   // ------------------------------------------------ camera animation
   const anim = { active: false };
   function flyTo(pos, target, dur = 1.4) {
@@ -207,6 +241,7 @@ async function main() {
     anim.t = 0; anim.dur = dur;
     anim.p0 = camera.position.clone(); anim.p1 = pos.clone();
     anim.t0 = controls.target.clone(); anim.t1 = target.clone();
+    controls.minDistance = 0; controls.maxDistance = Infinity;   // limits apply again after the flight
   }
   const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
   function stepAnim(dt) {
@@ -215,7 +250,7 @@ async function main() {
     const k = ease(Math.min(anim.t, 1));
     camera.position.lerpVectors(anim.p0, anim.p1, k);
     controls.target.lerpVectors(anim.t0, anim.t1, k);
-    if (anim.t >= 1) anim.active = false;
+    if (anim.t >= 1) { anim.active = false; controls.minDistance = view.min; controls.maxDistance = view.max; }
   }
 
   // clip animation (floors above slide away)
@@ -252,8 +287,8 @@ async function main() {
     const base = floorBase(fl);
     setClip(base + 0.001);
     const target = new THREE.Vector3(0, base, 2);
-    const offset = isMobile ? new THREE.Vector3(8, 150, 82) : new THREE.Vector3(16, 74, 58);
-    flyTo(target.clone().add(offset), target);
+    useView(VIEWS.floor, target);
+    flyTo(target.clone().add(floorOffset), target);
     ui.openFloor(fl);
     setTimeout(setShiftTarget, 60);
     document.body.classList.add('cutaway');
@@ -264,7 +299,8 @@ async function main() {
     removeInterior();
     selectedFloor = null; selectedApt = null; hoveredApt = null;
     setClip(1e4);
-    if (savedView) flyTo(savedView.pos, savedView.target);
+    useView(VIEWS.home, homeTarget);
+    if (savedView) flyTo(savedView.pos, savedView.target); else flyTo(homeTarget.clone().add(homeOffset), homeTarget);
     ui.closeFloor();
     viewShift.tx = 0; viewShift.ty = 0;
     document.body.classList.remove('cutaway');
@@ -289,8 +325,8 @@ async function main() {
         if (m) {
           m.geometry.computeBoundingBox();
           const c = m.geometry.boundingBox.getCenter(new THREE.Vector3());
-          const off = isMobile ? new THREE.Vector3(6, 60, 40) : new THREE.Vector3(8, 38, 31);
-          flyTo(c.clone().add(off), c, 1.0);
+          c.y = floorBase(selectedFloor);
+          flyTo(c.clone().add(VIEWS.floor.dir.clone().multiplyScalar(isMobile ? 70 : 46)), c, 1.0);
         }
       }
     },
@@ -388,11 +424,13 @@ async function main() {
     labelRenderer.setSize(w, h);
   }
   addEventListener('resize', resize);
+  addEventListener('sheetchange', () => setShiftTarget());
 
   // ------------------------------------------------ start
-  const startTarget = new THREE.Vector3(0, 11, 4);
-  const startPos = isMobile ? new THREE.Vector3(82, 46, 142) : new THREE.Vector3(78, 34, 118);
-  camera.position.set(240, 150, 420);
+  const startTarget = homeTarget.clone();
+  const startPos = homeTarget.clone().add(homeOffset);
+  useView(VIEWS.home, homeTarget);
+  camera.position.copy(homeTarget.clone().add(homeOffset.clone().multiplyScalar(2.6)));
   controls.target.copy(startTarget);
   applyTime(true);
   setProgress(1);
@@ -405,7 +443,6 @@ async function main() {
 
   const clock = new THREE.Clock();
   let since = 0;
-  const tMin = new THREE.Vector3(-95, 0, -95), tMax = new THREE.Vector3(95, 40, 95);
   // adaptive quality: drop resolution on slow GPUs
   const perf = { frames: 0, time: 0, checks: 0 };
   function adapt(dt) {
@@ -424,11 +461,12 @@ async function main() {
     const dt = Math.min(clock.getDelta(), 0.1);
     since += dt;
     adapt(dt);
-    controls.target.clamp(tMin, tMax);
     stepAnim(dt);
     stepClip(dt);
     stepViewShift(dt);
     controls.update();
+    enforceView(dt);
+    interiorLight.intensity = selectedFloor ? 0.3 + 1.2 * envNight : 0;
     if (since > (timeState.live ? 10 : 0.25)) { since = 0; if (timeState.live) applyTime(); }
     lighting.tick(clock.elapsedTime);
     env.update(dt, envNight);

@@ -461,12 +461,12 @@ function addEntranceSign(f1, root, mats) {
 // ---------------------------------------------------------------- interior cutaway
 const APT_COLORS = ['#e9c896', '#9fd0e6', '#c9e7a6', '#e6b4d8', '#f2d79a', '#b9c8f0', '#f0b9a6', '#a9e0cf'];
 
-export function buildInterior(fd, clipMats) {
+export function buildInterior(fd, furnish) {
   const base = floorBase(fd.floor);
   const g = new THREE.Group();
   g.name = 'interior-' + fd.floor;
   const slab = new THREE.Mesh(extrudePolys(fd.mass, base - 0.3, 0.3),
-    new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 0.9 }));
+    new THREE.MeshStandardMaterial({ color: 0xd9d5cc, roughness: 0.9 }));
   slab.receiveShadow = true; slab.castShadow = true;
   g.add(slab);
 
@@ -481,23 +481,17 @@ export function buildInterior(fd, clipMats) {
     walls.castShadow = true; walls.receiveShadow = true;
     g.add(walls);
   }
-  // terraces
-  for (const a of fd.apartments) {
-    if (!a.ter.length) continue;
-    const tg = flatPolys(a.ter.map((o) => ({ o, h: [] })), base + 0.012);
-    const tm = new THREE.Mesh(tg, new THREE.MeshStandardMaterial({ color: 0xa88a66, roughness: 0.8 }));
-    tm.receiveShadow = true; g.add(tm);
-  }
-  // apartment floors (pickable)
+  // floor finishes + furniture, carpets, appliances
+  if (furnish) g.add(furnish(fd, base));
+
+  // apartment overlays: invisible until hovered / selected (also the picking targets)
   const aptMeshes = [];
-  fd.apartments.forEach((a, k) => {
-    const col = new THREE.Color(a.commercial ? '#d7dde6' : APT_COLORS[k % APT_COLORS.length]);
-    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.75, emissive: col.clone(), emissiveIntensity: 0.05 });
-    const geo = flatPolys(a.polys.map((o) => ({ o, h: [] })), base + 0.02);
+  fd.apartments.forEach((a) => {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xe8b25a, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, fog: false });
+    const geo = flatPolys(a.polys.concat(a.ter).map((o) => ({ o, h: [] })), base + 0.03);
     const m = new THREE.Mesh(geo, mat);
-    m.receiveShadow = true;
+    m.renderOrder = 3;
     m.userData.apt = a;
-    m.userData.baseColor = col;
     aptMeshes.push(m);
     g.add(m);
   });

@@ -101,6 +101,33 @@ export function createUI(data, cb) {
     showTip(lastPointer.x, lastPointer.y, aptTipHTML(a));
   }
 
+  // ---------------------------------------------------------------- mobile bottom sheet
+  const mobile = () => innerWidth <= 760;
+  function setExpanded(on) {
+    panel.classList.toggle('expanded', !!on);
+    document.body.classList.toggle('sheet-expanded', !!on);
+    $('#fp-expand').textContent = on ? '▾' : '▴';
+    setTimeout(() => dispatchEvent(new Event('sheetchange')), 380);
+  }
+  $('#fp-handle').addEventListener('click', () => setExpanded(!panel.classList.contains('expanded')));
+  $('#fp-expand').addEventListener('click', () => setExpanded(!panel.classList.contains('expanded')));
+  {
+    // swipe the sheet up / down by its handle or header
+    let y0 = null;
+    const start = (e) => { y0 = e.clientY; };
+    const end = (e) => {
+      if (y0 === null) return;
+      const dy = e.clientY - y0; y0 = null;
+      if (dy < -30) setExpanded(true);
+      else if (dy > 30) setExpanded(false);
+    };
+    for (const n of [$('#fp-handle'), panel.querySelector('.fp-head')]) {
+      n.addEventListener('pointerdown', start);
+      n.addEventListener('pointerup', end);
+      n.addEventListener('pointercancel', () => { y0 = null; });
+    }
+  }
+
   // ---------------------------------------------------------------- floor panel
   function renderFloor(fl, scroll = true) {
     const f = byFloor.get(fl);
@@ -116,6 +143,20 @@ export function createUI(data, cb) {
     } else {
       pt.innerHTML = `<div class="pt-head">${t('notInPrice')}</div><div class="pt-onreq">${t('priceOnRequest')}</div>`;
     }
+    // compact chips (mobile, collapsed sheet)
+    const chips = $('#fp-chips');
+    chips.innerHTML = '';
+    [...list].sort((a, b) => aptNo(a) - aptNo(b)).forEach((a) => {
+      const c = document.createElement('button');
+      c.className = 'apt-chip' + (state.apt && state.apt.id === a.id ? ' sel' : '');
+      c.dataset.id = a.id;
+      const min = aptMinPrice(fl, a);
+      c.innerHTML = `<b>${a.commercial ? '★' : aptNo(a)}</b><span>${fmtArea(a.area)} m²<small>${min ? fmtMln(min) : (a.commercial ? t('commercial') : '—')}</small></span>`;
+      c.addEventListener('click', () => selectApt(a));
+      chips.appendChild(c);
+    });
+    const p0 = minPerM2(fl);
+    $('#fp-sub').textContent = t('aptCount', { n }) + (p0 ? ` · ${fmtMln(p0)} / m²` : '');
     const ul = $('#fp-list');
     ul.innerHTML = '';
     [...list].sort((a, b) => aptNo(a) - aptNo(b)).forEach((a) => {
@@ -141,6 +182,7 @@ export function createUI(data, cb) {
     renderFloor(fl);
     panel.classList.add('open');
     document.body.classList.add('floor-open');
+    setExpanded(false);
     rail.querySelectorAll('.rail-btn').forEach((b) => b.classList.toggle('active', +b.dataset.floor === fl));
     hideTip();
   }
@@ -149,6 +191,8 @@ export function createUI(data, cb) {
     state.floor = null; state.apt = null;
     panel.classList.remove('open');
     document.body.classList.remove('floor-open');
+    panel.classList.remove('expanded');
+    document.body.classList.remove('sheet-expanded');
     $('#fp-detail').classList.remove('open');
     rail.querySelectorAll('.rail-btn').forEach((b) => b.classList.remove('active'));
     closePlan();
@@ -159,12 +203,16 @@ export function createUI(data, cb) {
     cb.onSelectApt(a);
     renderApt(a);
     viewer.select(a ? a.id : null);
-    document.querySelectorAll('.apt-card').forEach((c) => c.classList.toggle('sel', a && c.dataset.id === a.id));
+    document.querySelectorAll('.apt-card, .apt-chip').forEach((c) => c.classList.toggle('sel', !!a && c.dataset.id === a.id));
+    if (a && mobile()) {
+      const chip = document.querySelector(`.apt-chip[data-id="${a.id}"]`);
+      if (chip) chip.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
   }
 
   function renderApt(a) {
     const box = $('#fp-detail');
-    if (!a) { box.classList.remove('open'); return; }
+    if (!a) { box.classList.remove('open'); dispatchEvent(new Event('sheetchange')); return; }
     const fl = state.floor;
     const rooms = a.list.filter((r) => r.n);
     const order = ['living', 'bedroom', 'kitchen', 'hall', 'bath', 'wc', 'storage', 'wardrobe', 'balcony', 'terrace'];
@@ -191,6 +239,7 @@ export function createUI(data, cb) {
         <div><div class="dt-title">${a.commercial ? t('commercial') : `${t('apt')} ${t('aptNo', { n: aptNo(a) })}`}</div>
         <div class="dt-sub">${t('floor', { n: fl })}${a.commercial ? '' : ' · ' + t('roomsN', { n: a.rooms })}</div></div>
       </div>
+      <div class="dt-mini"><div><b>${fmtArea(a.area)} m²</b><span>${a.commercial ? t('commercial') : t('roomsN', { n: a.rooms })} · ${aptMinPrice(fl, a) ? t('priceFrom', { p: fmtMln(aptMinPrice(fl, a)) }) : t('priceOnRequest')}</span></div><button class="btn small gold dt-more">${t('more')}</button></div>
       <div class="dt-area"><b>${fmtArea(a.area)}</b><span>m²</span>${a.areaT ? `<em>${t('areaTer')}: ${fmtArea(a.areaT)} m²</em>` : ''}</div>
       ${rooms.length ? `<div class="dt-sec">${t('rooms')}</div><ul class="rooms">${roomsHTML}</ul>` : ''}
       <div class="dt-sec">${t('installment', { m: CONFIG.installmentMonths })}</div>
@@ -202,6 +251,7 @@ export function createUI(data, cb) {
     box.classList.add('open');
     box.querySelector('.dt-back').addEventListener('click', () => selectApt(null));
     box.querySelector('.dt-plan').addEventListener('click', () => openPlan());
+    box.querySelector('.dt-more').addEventListener('click', () => setExpanded(true));
     box.querySelectorAll('.pl-tab').forEach((b) => b.addEventListener('click', () => { state.plan = +b.dataset.plan; renderApt(a); }));
   }
 

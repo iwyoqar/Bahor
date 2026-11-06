@@ -1,0 +1,14 @@
+{
+  "name": "bahor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bahor turar-joy majmuasi (Prestige Light House) — 3D interaktiv sayt",
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/dev-server.mjs",
+    "start": "node tools/dev-server.mjs --no-reload"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

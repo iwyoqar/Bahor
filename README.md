@@ -12,16 +12,27 @@ Bahor turar-joy majmuasi uchun interaktiv 3D sayt.
 - O'zbek va rus tillari, galereya.
 - **Telefonda** qavat ochilganda pastda ixcham panel chiqadi (qavat nomi va xonadonlar qatori), 3D ko'rinib turadi. To'liq narxlar va ro'yxat panelni yuqoriga surish yoki «Batafsil» tugmasi bilan ochiladi.
 
-## Ishga tushirish
+## Kompyuterda ishga tushirish
 
-Hech narsa o'rnatish yoki yig'ish (build) shart emas — bu oddiy statik sayt. Three.js `js/vendor/` ichida joylashgan.
+Kerak bo'ladi: **Node.js** (18 yoki undan yangi, https://nodejs.org → LTS) va ixtiyoriy ravishda **Git** (https://git-scm.com).
 
 ```bash
-python3 -m http.server 8000
-# brauzerda: http://localhost:8000
+git clone https://github.com/iwyoqar/Bahor.git
+cd Bahor
+npm run dev
 ```
 
-GitHub Pages'da joylash uchun: repozitoriy → Settings → Pages → `Deploy from a branch`, papka `/ (root)`.
+So'ng brauzerda **http://localhost:5173** ni oching. `npm install` shart emas: qo'shimcha paketlar yo'q, Three.js `js/vendor/` ichida.
+
+- Faylni (masalan `js/config.js`) o'zgartirib saqlasangiz, sahifa o'zi yangilanadi.
+- To'xtatish: terminalda `Ctrl + C`.
+- Port band bo'lsa, server keyingisini (5174, 5175, …) tanlaydi. O'zingiz belgilash: `PORT=3000 npm run dev` (Windows PowerShell'da: `$env:PORT=3000; npm run dev`).
+- Git o'rnatilmagan bo'lsa: GitHub'da **Code → Download ZIP**, arxivni oching, papka ichida terminal ochib `npm run dev`.
+- Node.js o'rniga Python bo'lsa: `python -m http.server 8000` → http://localhost:8000 (avtomatik yangilanishsiz).
+
+`index.html` faylini ikki marta bosib ochish ishlamaydi: brauzer modullar va ma'lumot fayllarini serversiz yuklamaydi.
+
+Sayt GitHub Pages'da: https://iwyoqar.github.io/Bahor/ (`gh-pages` branchidan). O'zgarishni saytga chiqarish: `git push origin HEAD:gh-pages`.
 
 `?q=low` parametri sifatni pasaytiradi (zaif qurilmalar uchun). Sekin qurilmalarda sayt sifatni o'zi ham avtomatik pasaytiradi.
 
@@ -76,5 +87,6 @@ js/i18n.js            o'zbek / rus tarjimalari
 data/floors.json      qavatlar, xonadonlar, devorlar (metrda)
 assets/plans/         asl chizmalar (WebP)
 assets/gallery/       renderlar
-tools/                PDF'dan ma'lumot ajratish skriptlari
+tools/                PDF'dan ma'lumot ajratish skriptlari, dev-server
+package.json          npm run dev / npm start
 ```

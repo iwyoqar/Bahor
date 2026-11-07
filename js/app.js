@@ -209,7 +209,8 @@ async function main() {
 
   // ------------------------------------------------ fixed camera angles
   const homeTarget = new THREE.Vector3(0, 11, 4);
-  const homeOffset = isMobile ? new THREE.Vector3(82, 35, 138) : new THREE.Vector3(78, 23, 114);
+  // elevated three-quarter aerial view, looking slightly down (hero frame for the AI renders)
+  const homeOffset = isMobile ? new THREE.Vector3(80, 50, 136) : new THREE.Vector3(64, 37, 94);
   const floorOffset = isMobile ? new THREE.Vector3(8, 150, 82) : new THREE.Vector3(16, 74, 58);
   const VIEWS = {
     home: { dir: homeOffset.clone().normalize(), dist: homeOffset.length(), min: isMobile ? 62 : 52, max: homeOffset.length() * 1.08,

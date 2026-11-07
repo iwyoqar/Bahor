@@ -1,73 +1,143 @@
-# Bahor — Higgsfield (Nano Banana) bilan fotorealistik render
+# Bahor — Higgsfield bilan «haqiqiy render» va video tur
 
-Maqsad: saytning asosiy ko'rinishi (bitta qotirilgan burchak) haqiqiy arxitektura renderidek ko'rinsin, lekin qavatlarni tanlash, yoritish va narxlar avvalgidek ishlasin.
+Omnya Lab «tower method» usuli Bahor uchun moslashtirilgan. Bizning ustunligimiz: binoning aniq 3D modeli bor. Shuning uchun:
 
-Qanday ishlaydi:
-1. Saytdan aynan o'sha burchakdan, interfeyssiz «xom» suratlar olinadi (`?capture=1`). Bu suratlar `docs/` yonida emas, alohida yuboriladi.
-2. Higgsfield'da Nano Banana har bir suratni fotorealistik renderga aylantiradi. Kompozitsiya va bino geometriyasi o'zgarmasligi shart.
-3. Tayyor renderlar saytga fon sifatida qo'yiladi. Qavat yoritilishi va bosish nuqtalari o'sha kameradagi 3D modeldan olinadi, shuning uchun render ustiga aniq tushadi. Kunning vaqtiga qarab renderlar almashadi.
-4. Qavat ichki ko'rinishi (mebel bilan) real vaqtli 3D bo'lib qoladi.
+- 1-referens sifatida oddiy foto emas, saytdagi aniq kamera burchagidan olingan surat beriladi;
+- qavat konturlarini qo'lda chizish shart emas: ularni 3D modeldan avtomatik olaman va render ustiga moslayman.
 
-## Fayllar
+## Kim nima qiladi
 
-| Fayl | Nima uchun | Nano Banana nisbati |
+| Qadam | Qayerda | Kim |
 |---|---|---|
-| `desktop-21x9_1-tong-0810.png` … `_5-tun-2100.png` | Kompyuter ekrani | 21:9 |
-| `mobile-9x16_1-tong-0810.png` … `_5-tun-2100.png` | Telefon | 9:16 |
-| `assets/gallery/render-1.jpg`, `render-2.jpg` | Uslub namunasi (developer renderlari) | — |
+| 1. Bino surati (hero) | Higgsfield → Nano Banana Pro, 16:9 | Siz (prompt tayyor) |
+| 2. Yakuniy kadr — xonadon ichi | Higgsfield → Nano Banana Pro, 16:9 | Siz (prompt tayyor) |
+| 3. Uchish videosi | Higgsfield → Seedance, boshlanish = 1, oxiri = 2 | Siz (prompt tayyor) |
+| 4. Xonama-xona videolar | Higgsfield → Kling, har biri oldingisining oxirgi kadridan | Siz; oxirgi kadrlarni men kesib beraman |
+| 5. Sayt: qavat tanlash, video pleyer, telefon | Kod | Men |
 
-## Higgsfield'da qadamlar
+Xom suratlar (16:9 kompyuter, 9:16 telefon; kunduz, oltin soat, shom, tun) alohida yuboriladi. Ularni qayta olish: sayt ishlab turganda `?capture=1&t=1040&pr=2` (t — kun boshidan daqiqalar, 1040 = 17:20), oyna 1280×720 (telefon uchun 405×720).
 
-1. Higgsfield → **Image** → model: **Nano Banana Pro** (bo'lmasa, Nano Banana).
-2. Rasm yuklash: **1-rasm** — bizning surat (masalan `desktop-21x9_2-kunduz-1230.png`), **2-rasm** — `render-1.jpg` (uslub uchun).
-3. Nisbat: kompyuter suratlari uchun **21:9**, telefon suratlari uchun **9:16**. Sifat: eng yuqori (2K/4K).
-4. Quyidagi asosiy promptni qo'ying va `{LIGHTING}` o'rniga shu vaqtga mos qatorni yozing.
-5. 2–4 variant yarating. Asl surat bilan solishtirib (ustma-ust 50% shaffoflikda), bino konturi va qavatlari eng aniq mos kelganini tanlang.
-6. **Avval kunduzgi renderni** tayyorlang. Qolgan vaqtlar uchun 1-rasm sifatida o'sha tanlangan kunduzgi renderni, 2-rasm sifatida shu vaqtdagi bizning suratni bering va «faqat kun vaqtini o'zgartir» promptidan foydalaning. Shunda mashinalar, daraxtlar va qo'shni binolar barcha vaqtlarda bir xil bo'ladi.
-7. Natijalarni asl fayl nomlari bilan saqlab, menga yuboring (yoki `assets/renders/` papkasiga qo'ying).
+---
 
-## Asosiy prompt (ingliz tilida — model shuni yaxshi tushunadi)
+## 1-qadam. Bino surati — Nano Banana Pro, 16:9
+
+**Referenslar:** 1 — `desktop-16x9_3-shom-1720.png` (bino va kamera), 2 — `assets/gallery/render-1.jpg` (materiallar va uslub).
+Asosiy kadr — shom (blue hour), qo'llanmadagidek. Keyin shu kadrdan boshqa vaqtlar yasaladi (pastda).
 
 ```
-Turn image 1 into a photorealistic architectural visualization render, as if photographed
-with a full-frame camera. Keep EXACTLY the same camera position, angle, framing, perspective
-and aspect ratio as image 1. Do not move, add, remove or resize any part of the building:
-every floor, window, balcony, cornice, roof, setback and the building outline must stay in
-the same position. Materials: ivory-white stucco facade with fine classical moldings,
-cornices and pilasters; warm beige travertine stone on the ground floor; dark tinted glass
-with slim graphite frames; black wrought-iron balcony railings; terracotta tile hip roofs;
-solar panels on the flat roofs. Use image 2 only as a reference for architectural style,
-colors and landscaping quality, not for composition. Surroundings: clean asphalt roads
-with crisp white markings, parked modern cars, paved sidewalks, lush trees and neat
-landscaping, classical black street lamps, a courtyard with a gazebo and a playground.
-Replace the plain grey neighbouring boxes with realistic but unobtrusive mid-rise
-residential buildings typical of Tashkent. Lighting: {LIGHTING}.
-Physically based materials, realistic soft shadows and ambient occlusion, subtle
-atmospheric perspective, sharp details, high-end architectural render quality.
-No text, no logos, no watermark.
+Use reference 1 for the building AND the camera: keep exactly this building and this exact
+camera position, angle, framing and lens. It is a nine-storey neoclassical residential
+complex, U-shaped in plan: ivory-white stucco facades with pilasters, cornices and moulded
+window surrounds, tall windows with small French balconies and black wrought-iron railings,
+a warm travertine ground floor with large shop windows, terracotta hip roofs on the rooftop
+pavilions, solar panels on the flat roofs, the left wing one floor lower at the top.
+Do not change the number of floors, the window rhythm, the setbacks or the outline: every
+floor must stay exactly where it is in reference 1. Use reference 2 only for materials,
+colours and level of detail, not for the shape or the camera.
+
+Elevated three-quarter aerial view, 16:9, camera about 40 m high and 110 m away, looking
+slightly down, framed exactly as reference 1. In front: a wide city avenue with crisp white
+markings and a few modern cars, a parking strip, tree-lined paved sidewalks, neat lawns and
+flower beds, classical black lamp posts. On the right: a side street. Behind and around:
+softly hazed mid-rise residential blocks of Tashkent, low and unobtrusive, faint mountains
+on the far horizon.
+
+Light: blue hour, ten minutes after sunset. Sky gradient from deep cyan at the top to soft
+peach at the horizon. Warm 2700K light on inside about a third of the apartments, scattered
+randomly; ground-floor shop windows and the entrance warmly lit; street lamps on, soft warm
+uplighting at the base of the facade.
+
+Shot on DJI Inspire 3, 24mm, f/5.6, everything sharp, light atmospheric haze for depth,
+natural contrast, true colours, real luxury developer launch photography.
+
+Avoid: changing the building design, the number of floors or the camera angle, eye-level
+view, people in the foreground, text, logos, watermark, lens flare, HDR, oversaturation,
+CGI look.
 ```
 
-### `{LIGHTING}` — kun vaqtlari
+**Boshqa vaqtlar** (kun vaqtiga qarab saytda almashadi). Referens 1 — tanlangan shom renderi, referens 2 — shu vaqtdagi xom surat:
 
-| Fayl | Yozing |
+```
+Reference 1 is the final photo. Keep it completely identical: same camera, same building,
+same cars, trees, neighbouring buildings, materials and colours. Change only the time of
+day and the light to: {LIGHT}. Use reference 2 only to see the sun direction, which windows
+are lit and where the lamps are. Real developer launch photography, no text, no CGI look.
+```
+
+| Fayl | `{LIGHT}` |
 |---|---|
-| `1-tong-0810` | early morning in late autumn, low warm sun from the east, long soft shadows, light morning haze, clear pale blue sky |
-| `2-kunduz-1230` | bright clear midday in autumn, crisp sunlight, deep blue sky with a few light clouds, crisp shadows |
-| `3-oltin-soat-1615` | golden hour shortly before sunset, warm orange sunlight grazing the facade, long shadows, warm glowing sky |
-| `4-shom-1720` | blue hour just after sunset, deep blue-violet sky with an orange glow on the horizon, warm 3000K light in the windows that are lit in image 1, street lamps on, car headlights |
-| `5-tun-2100` | night, dark blue starry sky, warm interior light only in the windows that are lit in image 1, warm uplighting at the base of the facade, glowing street lamps with light pools on the sidewalks, car light trails on the road |
+| kunduz 12:30 | bright clear autumn midday, crisp sunlight from the south, deep blue sky with a few light clouds, crisp shadows, no interior lights |
+| oltin soat 16:15 | golden hour shortly before sunset, warm orange sunlight grazing the facade, long shadows across the avenue, warm glowing sky |
+| tun 21:00 | night, deep navy sky, warm 2700K light in about half of the windows, warm uplighting at the base of the facade, glowing street lamps with light pools on the sidewalks, car light trails on the avenue |
 
-### Boshqa vaqtlar uchun prompt (kunduzgi render tayyor bo'lgach)
+Telefon uchun xuddi shu promptlar 9:16 da, referens 1 — `mobile-9x16_…png`.
+
+## 2-qadam. Yakuniy kadr — xonadon ichi, Nano Banana Pro, 16:9
+
+Misol: 6-qavat, old fasaddagi 2 xonali xonadonning mehmonxonasi. **Referenslar:** 1 — 1-qadamdagi tayyor shom renderi, 2 — divan rasmi, 3 — qandil, 4 — tosh/marmar namunasi (o'zingiz tanlaysiz). Qo'llanmada bu kadr 3 urinishda chiqqan, 2–3 variant yaratishga tayyor turing.
 
 ```
-Image 1 is the final daytime render. Keep image 1 completely identical — same camera,
-same building, same cars, trees, neighbouring buildings, colors and materials — and change
-only the time of day and lighting to: {LIGHTING}. Use image 2 only to see which windows
-are lit and where the street lamps are. Photorealistic architectural render, no text.
+Interior architectural photograph, 16:9. The living room of an apartment on the 6th floor
+of the building in reference 1, seen at 45 degrees from the French balcony through the tall
+open glass door with slim graphite frames; the black wrought-iron railing and the edge of
+the white moulded window surround are visible at the frame edges. About 24 m²: warm oak
+parquet, a large hand-knotted Uzbek carpet with a deep red and navy medallion pattern, the
+sofa from reference 2, the chandelier from reference 3, warm white walls with thin classical
+mouldings, a TV wall in the stone from reference 4, a dining table for six by the window,
+an open door at the back to a softly lit hallway. Same light as reference 1: blue hour
+outside, warm 2700K light inside, the city lights reflected in the glass.
+
+Shot on Sony A7R V, 24mm, f/8, everything sharp, real estate photography, natural contrast,
+true colours.
+
+Avoid: people, text, logos, fisheye distortion, oversaturation, CGI look.
 ```
 
-## Muhim
+## 3-qadam. Uchish — Seedance
 
-- Geometriya qanchalik aniq saqlansa, qavat yoritilishi renderga shunchalik aniq tushadi. Kichik siljishlarni men saytga qo'yishda avtomatik to'g'rilayman (asl surat bilan solishtirib).
-- Kamera burchagi saytda o'zgarmasligi kerak: burchak o'zgarsa, suratlarni qayta olish va renderlarni qayta yaratish kerak bo'ladi.
-- Suratlarni qayta olish: sayt ishlab turganda `http://localhost:5173/?capture=1&t=750&pr=2` (t — daqiqada vaqt, masalan 750 = 12:30), oyna o'lchami kompyuter uchun 1680×720, telefon uchun 405×720.
+Boshlanish kadri — 1-qadamdagi shom renderi, oxirgi kadr — 2-qadamdagi ichki kadr. Avval 480p qoralama, yoqsa 1080p.
+
+```
+One single continuous drone shot, no cuts, no dissolves. The first second holds the first
+frame exactly, then the camera starts moving slowly: the white neoclassical residential
+building at blue hour. The camera flies forward and slightly downward towards the building,
+smoothly accelerating, heading for one tall lit window on the 6th floor of the front facade,
+slightly right of the middle. As it approaches, the cornices, pilasters and window surrounds
+grow larger and the warm lit windows of that floor fill the frame. The camera slows down,
+passes over the black wrought-iron railing of the French balcony and comes to rest in front
+of the open glass door, looking into the warmly lit living room, matching the last frame
+exactly.
+
+The camera physically flies through the space; the facade, cornices and glass stay solid and
+in place for the whole shot; the transition is a real camera movement, not a dissolve.
+Steady gimbal movement, constant forward motion, no rotation, no shaking. The building and
+the room stay exactly the same as in the two frames. Blue hour light constant throughout,
+warm interior lights.
+```
+
+## 4-qadam. Xonama-xona — Kling
+
+Har bir video oldingisining **oxirgi kadri**dan boshlanadi: uchish → mehmonxona → oshxona → yotoqxona → hammom. Oxirgi kadrni videoning oxiridan oling yoki videoni menga yuboring, men aniq kadrni kesib beraman. Shu tarzda butun sayohat bitta kadrdek ko'rinadi.
+
+```
+Continue exactly from this frame. One continuous steady gimbal shot, no cuts: the camera
+walks slowly through the {ROOM_FROM} towards the open door and into the {ROOM_TO}, turning
+gently to reveal it, and comes to rest on a calm, well composed view of the {ROOM_TO}.
+All furniture, materials and light stay exactly as in the frame. Warm 2700K interior light,
+blue hour outside the windows. No people, no text, no shaking.
+```
+
+## 5-qadam. Sayt (mening ishim)
+
+Videolar va renderlar tayyor bo'lgach:
+
+- Bosh ekran: renderlar fon bo'ladi va kun vaqtiga qarab almashadi.
+- Qavat konturlari 3D modeldan olinadi va renderga avtomatik moslanadi. Qavat ustiga kelganda yoritiladi, panelda narxlar chiqadi (hozirgi panel).
+- Qavat tanlanganda uchish videosi o'ynaydi, keyin xonadon turi va xonalar tugmalari chiqadi.
+- «Orqaga» uchun uchish videosining teskarisini o'zim tayyorlayman.
+- Hozirgi interaktiv 3D reja (mebel, xonalar maydoni, narx kalkulyatori) «Qavat rejasi» sifatida saqlanadi.
+- Telefon uchun 9:16 renderlar ishlatiladi; videolar markazdan qirqiladi yoki alohida 9:16 versiyasi beriladi.
+
+Fayllarni menga quyidagicha nomlab yuboring:
+`hero_kunduz.png`, `hero_oltin.png`, `hero_shom.png`, `hero_tun.png` (+ `_mobile` varianti),
+`interior_living.png`, `flight.mp4`, `room_1_living.mp4`, `room_2_kitchen.mp4`, …

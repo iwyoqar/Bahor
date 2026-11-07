@@ -47,8 +47,11 @@ async function main() {
   const isMobile = matchMedia('(max-width: 760px)').matches || navigator.maxTouchPoints > 1;
   const params = new URLSearchParams(location.search);
   const low = params.get('q') === 'low';
+  // ?capture=1&t=1020&pr=2 : clean frame without UI (source images for AI photo-real renders)
+  const capture = params.has('capture');
+  if (capture) document.body.classList.add('capture');
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
-  renderer.setPixelRatio(low ? 1 : Math.min(devicePixelRatio, isMobile ? 1.5 : 1.75));
+  renderer.setPixelRatio(params.get('pr') ? +params.get('pr') : low ? 1 : Math.min(devicePixelRatio, isMobile ? 1.5 : 1.75));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -432,6 +435,7 @@ async function main() {
   useView(VIEWS.home, homeTarget);
   camera.position.copy(homeTarget.clone().add(homeOffset.clone().multiplyScalar(2.6)));
   controls.target.copy(startTarget);
+  if (capture && params.get('t')) { timeState.live = false; timeState.minutes = +params.get('t'); }
   applyTime(true);
   setProgress(1);
   // compile shaders before revealing
@@ -439,14 +443,14 @@ async function main() {
   await nextFrame();
   loaderEl.classList.add('done');
   setTimeout(() => loaderEl.remove(), 900);
-  flyTo(startPos, startTarget, 3.2);
+  if (capture) camera.position.copy(startPos); else flyTo(startPos, startTarget, 3.2);
 
   const clock = new THREE.Clock();
   let since = 0;
   // adaptive quality: drop resolution on slow GPUs
   const perf = { frames: 0, time: 0, checks: 0 };
   function adapt(dt) {
-    if (perf.checks > 6 || low) return;
+    if (perf.checks > 6 || low || capture) return;
     perf.frames++; perf.time += dt;
     if (perf.time < 2) return;
     const fps = perf.frames / perf.time;

@@ -332,3 +332,7 @@ body.floor-open .cta-parking { display: none; }
   #tooltip { min-width: 200px; }
   .pm-title { font-size: 22px; }
 }
+
+/* clean frame for render source images (?capture=1) */
+body.capture .topbar, body.capture #floor-rail, body.capture #time-widget, body.capture #hint, body.capture .cta,
+body.capture #tooltip, body.capture #labels, body.capture #loader { display: none !important; }

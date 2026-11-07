@@ -36,6 +36,10 @@ Sayt GitHub Pages'da: https://iwyoqar.github.io/Bahor/ (`gh-pages` branchidan). 
 
 `?q=low` parametri sifatni pasaytiradi (zaif qurilmalar uchun). Sekin qurilmalarda sayt sifatni o'zi ham avtomatik pasaytiradi.
 
+## Fotorealistik render (Higgsfield / Nano Banana)
+
+Asosiy ko'rinishni AI render bilan almashtirish bo'yicha qo'llanma va promptlar: [docs/ai-render.md](docs/ai-render.md). Render uchun xom suratlar `?capture=1&t=750&pr=2` rejimida olinadi (interfeyssiz, qotirilgan kamera burchagidan).
+
 ## Narx va aloqa ma'lumotlarini o'zgartirish
 
 Hammasi `js/config.js` faylida:

@@ -14,6 +14,11 @@ export const CONFIG = {
   location: { lat: 41.3111, lon: 69.2797, tz: 5, tzName: 'Asia/Tashkent' },
   // Asosiy (А o'qi bo'yidagi) fasad qaysi tomonga qaragan, gradusda: 180 = janub
   facadeAzimuth: 180,
+  // Sayt doim kunduzgi yorug'likda: quyosh holati shu sana va vaqt bo'yicha (Toshkent vaqti)
+  fixedTime: { y: 2026, m: 4, d: 15, minutes: 11 * 60 },
+
+  // Bosh ko'rinish uchun fotorealistik render (kompyuter). Kamera burchagi o'zgarsa, qayta yaratiladi.
+  hero: { desktop: 'assets/hero/hero-desktop.jpg', aspect: 16 / 9 },
 
   // Narxlar: 1 m² uchun, so'mda. 6 oylik muddatli to'lov.
   // Kalit — boshlang'ich to'lov ulushi (%). 100 = to'liq to'lov.

@@ -3,7 +3,6 @@ import { CONFIG } from './config.js';
 import { t, setLang, getLang, onLang, fmtMoney, fmtMln, fmtArea, roomName } from './i18n.js';
 import { floorPrices, minPerM2, aptPrice, aptMinPrice } from './pricing.js';
 import { PlanViewer } from './plan2d.js';
-import { fmtClock } from './sun.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -308,24 +307,10 @@ export function createUI(data, cb) {
     else if (state.floor) cb.onBack();
   });
 
-  // ---------------------------------------------------------------- time widget
-  const slider = $('#time-slider');
-  const liveBtn = $('#time-live');
-  slider.addEventListener('input', () => cb.onTime(+slider.value, false));
-  liveBtn.addEventListener('click', () => cb.onTime(null, true));
-  function setClock(minutes, phase, live) {
-    $('#time-clock').textContent = fmtClock(minutes);
-    $('#time-phase').textContent = t(phase);
-    $('#time-phase').dataset.phase = phase;
-    if (document.activeElement !== slider) slider.value = Math.round(minutes);
-    liveBtn.classList.toggle('on', live);
-    document.body.dataset.phase = phase;
-  }
-
   applyTexts();
 
   return {
-    state, setHoverFloor, showTip, hideTip, floorTipHTML, aptTipHTML, openFloor, closeFloor, selectApt, setClock,
+    state, setHoverFloor, showTip, hideTip, floorTipHTML, aptTipHTML, openFloor, closeFloor, selectApt,
     highlightApt(id) {
       document.querySelectorAll('.apt-card').forEach((c) => c.classList.toggle('hl', c.dataset.id === id));
       viewer.highlight(id);

@@ -14,7 +14,7 @@ import { buildEnvironment } from './environment.js';
 import { createLighting } from './lighting.js';
 import { createUI } from './ui.js';
 import { t, fmtArea, roomName } from './i18n.js';
-import { localParts, dateFromLocal, phaseOf } from './sun.js';
+import { dateFromLocal } from './sun.js';
 
 const loaderEl = document.getElementById('loader');
 const loaderBar = document.getElementById('loader-bar');
@@ -51,7 +51,7 @@ async function main() {
   // ?capture=1&t=1020&pr=2 : clean frame without UI (source images for AI photo-real renders)
   const capture = params.has('capture');
   if (capture) document.body.classList.add('capture');
-  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
+  const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance', preserveDrawingBuffer: false });
   renderer.setPixelRatio(params.get('pr') ? +params.get('pr') : low ? 1 : Math.min(devicePixelRatio, isMobile ? 1.5 : 1.75));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
@@ -106,6 +106,21 @@ async function main() {
     hl.set(f.floor, { mesh, lines });
   }
 
+  // floor light drawn over the photo-real hero: depth pre-pass of all floors, then the hovered floor
+  const overlayScene = new THREE.Scene();
+  const ovDepthMat = new THREE.MeshBasicMaterial({ colorWrite: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+  const ovFillMat = new THREE.MeshBasicMaterial({ color: 0xf2c061, transparent: true, opacity: 0.34, depthWrite: false, toneMapped: false });
+  const ovLineMat = new THREE.LineBasicMaterial({ color: 0xffe3a6, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false });
+  const ov = new Map();
+  for (const f of floors) {
+    const h = hl.get(f.floor);
+    const depth = new THREE.Mesh(h.mesh.geometry, ovDepthMat); depth.renderOrder = 0;
+    const fill = new THREE.Mesh(h.mesh.geometry, ovFillMat); fill.renderOrder = 1; fill.visible = false;
+    const lines = new THREE.LineSegments(h.lines.geometry, ovLineMat); lines.renderOrder = 2; lines.visible = false;
+    overlayScene.add(depth, fill, lines);
+    ov.set(f.floor, { fill, lines });
+  }
+
   // ------------------------------------------------ post processing
   const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: low ? 0 : isMobile ? 2 : 4 });
   const composer = new EffectComposer(renderer, rt);
@@ -115,38 +130,18 @@ async function main() {
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
-  // ------------------------------------------------ time of day
+  // ------------------------------------------------ fixed daytime light
   const TZ = CONFIG.location.tz;
-  const timeState = { live: true, minutes: 0 };
-  let lastLightUpdate = -1e9;
-  function currentDate() {
-    const now = new Date();
-    if (timeState.live) { timeState.minutes = localParts(now, TZ).minutes; return now; }
-    return dateFromLocal(localParts(now, TZ), timeState.minutes, TZ);
-  }
-  function litFraction(h) {
-    if (h >= 17 && h < 23) return 0.6;
-    if (h >= 23 || h < 1) return 0.42;
-    if (h >= 1 && h < 5) return 0.18;
-    if (h >= 5 && h < 8) return 0.45;
-    return 0.35;
-  }
+  const FT = CONFIG.fixedTime;
+  const fixedDate = dateFromLocal({ y: FT.y, m: FT.m, d: FT.d }, FT.minutes, TZ);
   function applyTime(force = false) {
-    const d = currentDate();
-    const s = lighting.update(d, { forceEnv: force });
-    const h = timeState.minutes / 60;
-    const night = s.night;
-    mats.uniforms.night.value = night > 0.02 ? litFraction(h) * Math.min(1, night * 1.4) + (1 - s.day) * 0.05 : 0;
-    mats.uniforms.winIntensity.value = 0.2 + 1.25 * night;
-    mats.uniforms.uplight.value = 0.22 * night;
-    if (!aptView) {
-      bloom.strength = 0.15 + 0.42 * night;
-      bloom.threshold = 0.92 - 0.14 * night;
-    }
-    if (bld.root.userData.signMat) bld.root.userData.signMat.emissiveIntensity = 0.2 + 1.6 * night;
-    setFurnishingNight(aptView ? 0.55 : night);
-    envNight = night;
-    ui.setClock(timeState.minutes, phaseOf(s.elevation, h < 12), timeState.live);
+    lighting.update(fixedDate, { forceEnv: force });
+    mats.uniforms.night.value = 0;
+    mats.uniforms.winIntensity.value = 0.2;
+    mats.uniforms.uplight.value = 0;
+    if (!aptView) { bloom.strength = 0.15; bloom.threshold = 0.92; }
+    if (bld.root.userData.signMat) bld.root.userData.signMat.emissiveIntensity = 0.2;
+    setFurnishingNight(aptView ? 0.55 : 0);
   }
   let envNight = 0;
 
@@ -164,6 +159,7 @@ async function main() {
     if (hoveredFloor && hl.get(hoveredFloor)) { hl.get(hoveredFloor).mesh.visible = false; hl.get(hoveredFloor).lines.visible = false; }
     hoveredFloor = fl;
     if (fl && !selectedFloor) { hl.get(fl).mesh.visible = true; hl.get(fl).lines.visible = true; }
+    ov.forEach((o, f) => { o.fill.visible = o.lines.visible = f === fl && !selectedFloor; });
     ui.setHoverFloor(fl);
     renderer.domElement.style.cursor = fl ? 'pointer' : '';
   }
@@ -243,8 +239,9 @@ async function main() {
 
   // ------------------------------------------------ camera animation
   const anim = { active: false };
-  function flyTo(pos, target, dur = 1.4) {
+  function flyTo(pos, target, dur = 1.4, done = null) {
     anim.active = true;
+    anim.done = done;
     anim.t = 0; anim.dur = dur;
     anim.p0 = camera.position.clone(); anim.p1 = pos.clone();
     anim.t0 = controls.target.clone(); anim.t1 = target.clone();
@@ -257,7 +254,10 @@ async function main() {
     const k = ease(Math.min(anim.t, 1));
     camera.position.lerpVectors(anim.p0, anim.p1, k);
     controls.target.lerpVectors(anim.t0, anim.t1, k);
-    if (anim.t >= 1) { anim.active = false; controls.minDistance = view.min; controls.maxDistance = view.max; }
+    if (anim.t >= 1) {
+      anim.active = false; controls.minDistance = view.min; controls.maxDistance = view.max;
+      if (anim.done) { const d = anim.done; anim.done = null; d(); }
+    }
   }
 
   // clip animation (floors above slide away)
@@ -351,6 +351,7 @@ async function main() {
   function selectFloor(fl) {
     if (selectedFloor === fl) return;
     if (aptView) leaveApt(false);
+    setPhoto(false);
     if (!selectedFloor) savedView = { pos: camera.position.clone(), target: controls.target.clone() };
     removeInterior();
     setHoverFloor(null);
@@ -375,7 +376,9 @@ async function main() {
     selectedFloor = null; selectedApt = null; hoveredApt = null;
     setClip(1e4);
     useView(VIEWS.home, homeTarget);
-    if (savedView) flyTo(savedView.pos, savedView.target); else flyTo(homeTarget.clone().add(homeOffset), homeTarget);
+    // back home: the photo-real hero takes over again once the camera has landed
+    const homePos = homeTarget.clone().add(homeOffset);
+    flyTo(homePos, homeTarget, 1.4, () => { if (!selectedFloor) setPhoto(true); });
     ui.closeFloor();
     viewShift.tx = 0; viewShift.ty = 0;
     document.body.classList.remove('cutaway');
@@ -397,11 +400,6 @@ async function main() {
       if (interior) interior.aptMeshes.forEach(paintApt);
       if (a && selectedFloor) enterApt(a);
       else if (!a) leaveApt(true);
-    },
-    onTime: (minutes, live) => {
-      timeState.live = live;
-      if (!live) timeState.minutes = minutes;
-      applyTime();
     },
   });
 
@@ -470,6 +468,11 @@ async function main() {
   function setShiftTarget() { const s = panelShift(); viewShift.tx = s.x; viewShift.ty = s.y; }
   function applyViewOffset() {
     const w = innerWidth, h = innerHeight;
+    if (photo.active) {
+      if (photo.z > 1.0001) camera.setViewOffset(w, h, photo.x0, photo.y0, w / photo.z, h / photo.z);
+      else camera.clearViewOffset();
+      return;
+    }
     if (Math.abs(viewShift.x) < 0.5 && Math.abs(viewShift.y) < 0.5) camera.clearViewOffset();
     else camera.setViewOffset(w, h, viewShift.x, viewShift.y, w, h);
   }
@@ -484,10 +487,72 @@ async function main() {
     applyViewOffset();
   }
 
+  // ------------------------------------------------ photo-real hero (desktop home view)
+  const heroEl = document.getElementById('hero');
+  const heroImg = document.getElementById('hero-photo');
+  const HERO_ASPECT = CONFIG.hero.aspect;
+  const BASE_FOV = camera.fov;
+  const photo = { loaded: false, enabled: false, active: false, z: 1, x0: 0, y0: 0 };
+  const photoAllowed = () => photo.loaded && !isMobile && !capture && innerWidth > 760;
+  function frameFov() {
+    // on screens wider than the photo keep the photo's horizontal field of view
+    const A = innerWidth / innerHeight;
+    if (isMobile || A <= HERO_ASPECT) return BASE_FOV;
+    return 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(BASE_FOV / 2)) * HERO_ASPECT / A));
+  }
+  function layoutPhoto() {
+    const W = innerWidth, H = innerHeight;
+    let pw, ph;
+    if (W / H <= HERO_ASPECT) { ph = H; pw = H * HERO_ASPECT; } else { pw = W; ph = W / HERO_ASPECT; }
+    Object.assign(heroImg.style, { width: pw + 'px', height: ph + 'px', left: (W - pw) / 2 + 'px', top: (H - ph) / 2 + 'px' });
+    heroEl.style.transform = `scale(${photo.z}) translate(${-photo.x0}px, ${-photo.y0}px)`;
+  }
+  function resetPhotoZoom() { photo.z = 1; photo.x0 = 0; photo.y0 = 0; layoutPhoto(); }
+  function photoZoom(cx, cy, factor) {
+    const W = innerWidth, H = innerHeight;
+    const z0 = photo.z, z1 = Math.min(2.2, Math.max(1, z0 * factor));
+    const qx = photo.x0 + cx / z0, qy = photo.y0 + cy / z0;   // point under the cursor stays put
+    photo.z = z1;
+    photo.x0 = Math.min(Math.max(qx - cx / z1, 0), W - W / z1);
+    photo.y0 = Math.min(Math.max(qy - cy / z1, 0), H - H / z1);
+    layoutPhoto(); applyViewOffset();
+  }
+  function setPhoto(on, fade = true) {
+    if (!photo.enabled) on = false;
+    const canvas = renderer.domElement;
+    if (on) {
+      if (photo.active) return;
+      resetPhotoZoom();
+      document.body.classList.add('photo');
+      controls.enabled = false;
+      const go = () => { photo.active = true; applyViewOffset(); canvas.style.transition = 'none'; canvas.style.opacity = '1'; requestAnimationFrame(() => { canvas.style.transition = ''; }); };
+      if (fade) { canvas.style.opacity = '0'; setTimeout(go, 460); } else go();
+    } else {
+      if (!photo.active && !document.body.classList.contains('photo')) return;
+      photo.active = false;
+      resetPhotoZoom();
+      controls.enabled = true;
+      applyViewOffset();
+      canvas.style.transition = 'none'; canvas.style.opacity = '0';
+      requestAnimationFrame(() => { canvas.style.transition = ''; canvas.style.opacity = '1'; });
+      setTimeout(() => { if (!photo.active) document.body.classList.remove('photo'); }, 520);
+    }
+  }
+  el.addEventListener('wheel', (e) => {
+    if (!photo.active) return;
+    e.preventDefault();
+    photoZoom(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
+  }, { passive: false });
+
   // ------------------------------------------------ resize
   function resize() {
     const w = innerWidth, h = innerHeight;
-    camera.aspect = w / h; camera.updateProjectionMatrix();
+    camera.aspect = w / h; camera.fov = frameFov(); camera.updateProjectionMatrix();
+    const was = photo.enabled;
+    photo.enabled = photoAllowed();
+    if (photo.enabled) layoutPhoto();
+    if (was && !photo.enabled) setPhoto(false);
+    if (!was && photo.enabled && !selectedFloor) setPhoto(true);
     setShiftTarget(); applyViewOffset();
     renderer.setSize(w, h);
     composer.setSize(w, h);
@@ -502,15 +567,21 @@ async function main() {
   useView(VIEWS.home, homeTarget);
   camera.position.copy(homeTarget.clone().add(homeOffset.clone().multiplyScalar(2.6)));
   controls.target.copy(startTarget);
-  if (capture && params.get('t')) { timeState.live = false; timeState.minutes = +params.get('t'); }
   applyTime(true);
+  if (CONFIG.hero.desktop && !isMobile && !capture) {
+    heroImg.src = CONFIG.hero.desktop;
+    try { await heroImg.decode(); photo.loaded = true; } catch (e) { console.warn('hero image', e); }
+  }
+  camera.fov = frameFov(); camera.updateProjectionMatrix();
+  photo.enabled = photoAllowed();
   setProgress(1);
   // compile shaders before revealing
   renderer.compile(scene, camera);
   await nextFrame();
   loaderEl.classList.add('done');
   setTimeout(() => loaderEl.remove(), 900);
-  if (capture) camera.position.copy(startPos); else flyTo(startPos, startTarget, 3.2);
+  if (capture || photo.enabled) camera.position.copy(startPos); else flyTo(startPos, startTarget, 3.2);
+  if (photo.enabled) { layoutPhoto(); setPhoto(true, false); document.body.classList.add('photo-intro'); }
 
   const clock = new THREE.Clock();
   let since = 0;
@@ -538,11 +609,18 @@ async function main() {
     controls.update();
     enforceView(dt);
     interiorLight.intensity = selectedFloor && !aptView ? 0.3 + 1.2 * envNight : 0;
-    if (since > (timeState.live ? 10 : 0.25)) { since = 0; if (timeState.live) applyTime(); }
     lighting.tick(clock.elapsedTime);
     env.update(dt, envNight);
     // keep shadow camera centred on the view target
-    composer.render();
+    if (photo.active) {
+      renderer.setRenderTarget(null);
+      renderer.setClearColor(0x000000, 0);
+      renderer.clear();
+      renderer.render(overlayScene, camera);
+    } else {
+      renderer.setClearColor(0x000000, 1);
+      composer.render();
+    }
     labelRenderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
@@ -550,11 +628,12 @@ async function main() {
 
   // debug / automation hooks
   window.__bahor = {
-    selectFloor, back, setTime: (m) => { timeState.live = false; timeState.minutes = m; applyTime(true); },
-    live: () => { timeState.live = true; applyTime(true); }, camera, controls, renderer, scene,
+    selectFloor, back, camera, controls, renderer, scene,
     selectApt: (id) => { const fd = byFloor.get(selectedFloor); const a = fd && fd.apartments.find((x) => x.id === id); if (a) ui.selectApt(a); },
     hover: (fl) => setHoverFloor(fl),
     aptMode: () => !!aptView,
+    photo: () => photo.active,
+    hovered: () => hoveredFloor,
     fps: () => renderer.info.render.frame,
     view: (x, y, z, tx, ty, tz) => { anim.active = false; camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update(); },
     ready: true,

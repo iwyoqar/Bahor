@@ -21,11 +21,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 button { font: inherit; color: inherit; cursor: pointer; }
 a { color: inherit; }
 
+#hero { position: fixed; inset: 0; overflow: hidden; display: none; transform-origin: 0 0; }
+#hero img { position: absolute; display: block; user-select: none; -webkit-user-drag: none; }
+body.photo #hero { display: block; }
 #scene, #scene canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#scene canvas { transition: opacity .45s ease; }
 #labels { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
 
 /* ------------------------------------------------ glass base */
-.topbar, #floor-rail, #floor-panel, #time-widget, #tooltip, .chip, #hint, .cta-parking {
+.topbar, #floor-rail, #floor-panel, #tooltip, .chip, #hint, .cta-parking {
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
 }
@@ -190,29 +194,6 @@ body.apt-mode #labels .apt-tag { display: none; }
 .icon-btn { flex: none; width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--line-2); background: rgba(255,255,255,.05); display: grid; place-items: center; font-size: 16px; }
 .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
 
-/* ------------------------------------------------ time widget */
-#time-widget {
-  position: fixed; left: var(--gutter); bottom: var(--gutter); z-index: 9; width: 300px;
-  background: var(--glass); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px 8px; box-shadow: var(--shadow);
-  transition: opacity .3s, transform .4s;
-}
-.tw-top { display: flex; align-items: center; gap: 10px; }
-.tw-clock { font-family: var(--serif); font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-.tw-phase { font-size: 12px; color: var(--muted); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); }
-.tw-phase[data-phase="night"] { color: #9db4ff; border-color: rgba(157,180,255,.35); }
-.tw-phase[data-phase="day"] { color: #ffd98a; border-color: rgba(255,217,138,.35); }
-.tw-phase[data-phase="dawn"], .tw-phase[data-phase="dusk"] { color: #ffae7a; border-color: rgba(255,174,122,.35); }
-.tw-live { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; font-size: 12px; font-weight: 600; color: var(--muted); }
-.tw-live i { width: 7px; height: 7px; border-radius: 50%; background: #777; }
-.tw-live.on { color: #b8f5c8; border-color: rgba(120,220,150,.45); }
-.tw-live.on i { background: #48d27a; box-shadow: 0 0 0 0 rgba(72,210,122,.6); animation: pulse 1.8s infinite; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(72,210,122,.55); } 70% { box-shadow: 0 0 0 8px rgba(72,210,122,0); } 100% { box-shadow: 0 0 0 0 rgba(72,210,122,0); } }
-#time-slider { width: 100%; margin: 12px 0 2px; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; outline: none;
-  background: linear-gradient(90deg, #0f1730 0%, #1b2547 18%, #e78b5c 26%, #8fc3ef 36%, #9ad0f5 55%, #f0b06c 72%, #b45b5b 78%, #1b2547 86%, #0f1730 100%); }
-#time-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff7e0; border: 3px solid var(--gold); box-shadow: 0 2px 10px rgba(0,0,0,.4); }
-#time-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff7e0; border: 3px solid var(--gold); }
-.tw-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); padding: 0 2px; }
-
 /* ------------------------------------------------ hint & cta */
 #hint { position: fixed; left: 50%; bottom: calc(var(--gutter) + 6px); transform: translateX(-50%); z-index: 8; display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: 13px; color: #ddd7ca; transition: opacity .4s; white-space: nowrap; }
 #hint .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px var(--gold); }
@@ -285,7 +266,6 @@ body.floor-open #hint { opacity: 0; pointer-events: none; }
 .ld-msg { margin-top: 14px; font-size: 12px; color: var(--muted); min-height: 1em; }
 
 /* ------------------------------------------------ cutaway mode */
-body.floor-open #time-widget { opacity: 0; pointer-events: none; transform: translateY(20px); }
 body.floor-open .cta-parking { display: none; }
 
 /* ------------------------------------------------ responsive */
@@ -311,8 +291,6 @@ body.floor-open .cta-parking { display: none; }
   .rail-btn { padding: 2px; gap: 0; flex: 1; min-width: 34px; justify-content: center; }
   .rb-info { display: none; }
   .rb-num { width: 100%; height: 34px; font-size: 17px; }
-  #time-widget { width: auto; left: var(--gutter); right: var(--gutter); bottom: 124px; padding: 8px 12px 6px; }
-  .tw-clock { font-size: 24px; }
   .brand-sub span[data-t="by"], .brand-sub .sep { display: none; }
   #hint { display: none; }
   .cta { left: var(--gutter); right: var(--gutter); }
@@ -356,5 +334,9 @@ body.floor-open .cta-parking { display: none; }
 }
 
 /* clean frame for render source images (?capture=1) */
-body.capture .topbar, body.capture #floor-rail, body.capture #time-widget, body.capture #hint, body.capture .cta,
+body.capture .topbar, body.capture #floor-rail, body.capture #hint, body.capture .cta,
 body.capture #tooltip, body.capture #labels, body.capture #loader { display: none !important; }
+
+/* photo-real hero intro */
+body.photo-intro #hero-photo { animation: heroIn 1.8s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes heroIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }

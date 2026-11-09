@@ -107,7 +107,46 @@ export function createLighting(scene, renderer, opts = {}) {
   // rotate astronomy into scene: facade (A) azimuth faces +z in scene
   const yaw = (CONFIG.facadeAzimuth - 180) * RAD;
 
+  // ---- studio mode: isolated apartment model on a dark backdrop with warm light
+  const studioBg = (() => {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 512;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 0, 512);
+    g.addColorStop(0, '#07080b'); g.addColorStop(0.55, '#141519'); g.addColorStop(1, '#1d1b18');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 512);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  let studio = null;
+  function setStudio(on, center, size) {
+    if (on) {
+      studio = true;
+      sky.visible = false; stars.visible = false; moonSprite.visible = false;
+      scene.fog = null; scene.background = studioBg;
+      moon.intensity = 0;
+      sun.castShadow = true;
+      sun.color.setRGB(1, 0.92, 0.8); sun.intensity = 2.6;
+      sun.target.position.copy(center);
+      sun.position.copy(center).add(new THREE.Vector3(-26, 58, 30));
+      const r = size * 0.75 + 3;
+      sc.left = -r; sc.right = r; sc.top = r; sc.bottom = -r; sc.updateProjectionMatrix();
+      sun.shadow.bias = -0.0004;
+      hemi.intensity = 0.8; hemi.color.setRGB(1, 0.95, 0.88); hemi.groundColor.setRGB(0.42, 0.38, 0.33);
+      renderer.toneMappingExposure = 0.6;
+      scene.environmentIntensity = 0.4;
+    } else if (studio) {
+      studio = null;
+      sky.visible = true; stars.visible = true; moonSprite.visible = true;
+      scene.fog = fog; scene.background = null;
+      sc.left = -95; sc.right = 95; sc.top = 95; sc.bottom = -95; sc.updateProjectionMatrix();
+      sun.shadow.bias = -0.00025;
+      sun.target.position.set(0, 0, 0);
+      lastEnvEl = 999;
+    }
+  }
+
   function update(date, { forceEnv = false } = {}) {
+    if (studio) return state;
     const { lat, lon } = CONFIG.location;
     const p = sunPosition(date, lat, lon);
     state.elevation = p.elevation; state.azimuth = p.azimuth;
@@ -174,5 +213,5 @@ export function createLighting(scene, renderer, opts = {}) {
 
   function tick(t) { starMat.uniforms.uTime.value = t; }
 
-  return { update, tick, state, sun, hemi, sky };
+  return { update, tick, state, sun, hemi, sky, setStudio };
 }

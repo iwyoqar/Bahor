@@ -76,6 +76,7 @@ for f, fo in zip(raw, data['floors']):
             print('no match', fl, key); continue
         labels = [dict(n=r['n'], a=r['a'], x=r['x'], y=r['y']) for r in apt['list']]
         rooms = []
+        used = set()   # each label belongs to exactly one room
         for src, val in ((lab, ri + 1), (ter, ri + 1)):
             A = (src == val)
             if not A.any():
@@ -91,6 +92,10 @@ for f, fo in zip(raw, data['floors']):
                     continue
                 comps[k] = []
             for li, lb in enumerate(labels):
+                if li in used:
+                    continue
+                if src is ter and lb['n'] not in ('terrace', 'balcony'):
+                    continue   # open terraces only take terrace / balcony labels
                 c, r = m_to_rc(lb['x'], lb['y'])
                 r -= r0; c -= c0
                 found = None
@@ -101,6 +106,7 @@ for f, fo in zip(raw, data['floors']):
                         found = vals[0]; break
                 if found is not None:
                     comps[found].append(li)
+                    used.add(li)
             for k, lis in comps.items():
                 mask = (cc == k)
                 # small balcony labels next to a room must not claim part of it

@@ -9,10 +9,11 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { CONFIG, floorBase, floorHeight } from './config.js';
 import { buildBuilding, buildInterior, createMaterials, extrudePolys, toWorld } from './building.js';
 import { buildFurnishing, setFurnishingNight } from './furniture.js';
+import { buildApartmentModel } from './aptview.js';
 import { buildEnvironment } from './environment.js';
 import { createLighting } from './lighting.js';
 import { createUI } from './ui.js';
-import { t, fmtArea } from './i18n.js';
+import { t, fmtArea, roomName } from './i18n.js';
 import { localParts, dateFromLocal, phaseOf } from './sun.js';
 
 const loaderEl = document.getElementById('loader');
@@ -138,10 +139,12 @@ async function main() {
     mats.uniforms.night.value = night > 0.02 ? litFraction(h) * Math.min(1, night * 1.4) + (1 - s.day) * 0.05 : 0;
     mats.uniforms.winIntensity.value = 0.2 + 1.25 * night;
     mats.uniforms.uplight.value = 0.22 * night;
-    bloom.strength = 0.15 + 0.42 * night;
-    bloom.threshold = 0.92 - 0.14 * night;
+    if (!aptView) {
+      bloom.strength = 0.15 + 0.42 * night;
+      bloom.threshold = 0.92 - 0.14 * night;
+    }
     if (bld.root.userData.signMat) bld.root.userData.signMat.emissiveIntensity = 0.2 + 1.6 * night;
-    setFurnishingNight(night);
+    setFurnishingNight(aptView ? 0.55 : night);
     envNight = night;
     ui.setClock(timeState.minutes, phaseOf(s.elevation, h < 12), timeState.live);
   }
@@ -215,7 +218,7 @@ async function main() {
   const VIEWS = {
     home: { dir: homeOffset.clone().normalize(), dist: homeOffset.length(), min: isMobile ? 62 : 52, max: homeOffset.length() * 1.08,
       bmin: new THREE.Vector3(-38, 2, -24), bmax: new THREE.Vector3(38, 26, 30) },
-    floor: { dir: floorOffset.clone().normalize(), dist: floorOffset.length(), min: isMobile ? 40 : 26, max: floorOffset.length() * 1.1,
+    floor: { fixY: true, dir: floorOffset.clone().normalize(), dist: floorOffset.length(), min: isMobile ? 40 : 26, max: floorOffset.length() * 1.1,
       bmin: new THREE.Vector3(-38, 0, -24), bmax: new THREE.Vector3(38, 40, 26) },
   };
   let view = VIEWS.home;
@@ -229,7 +232,7 @@ async function main() {
     if (anim.active) return;
     const t = controls.target;
     t.clamp(view.bmin, view.bmax);
-    if (view === VIEWS.floor) t.y = viewHome.y;
+    if (view.fixY) t.y = viewHome.y;
     let d = camera.position.distanceTo(t);
     d = Math.min(Math.max(d, view.min), view.max);
     // when zoomed out, drift back to the default framing
@@ -279,8 +282,75 @@ async function main() {
     interior = null;
   }
 
+  // ------------------------------------------------ isolated apartment model (like a dollhouse)
+  let aptView = null;           // { model, labels, apt }
+  const aptModels = new Map();
+  const aptDir = new THREE.Vector3(0.55, 1.0, 0.85).normalize();
+  function enterApt(a) {
+    if (aptView && aptView.apt.id === a.id) return;
+    if (aptView) leaveApt(false);
+    const fd = byFloor.get(selectedFloor);
+    let model = aptModels.get(a.id);
+    if (!model) { model = buildApartmentModel(fd, a); aptModels.set(a.id, model); }
+    // hide building, surroundings and the floor cutaway
+    bld.root.visible = false; env.group.visible = false;
+    if (interior) { interior.group.visible = false; interior.labels.forEach((o) => { o.element.style.display = 'none'; }); }
+    scene.add(model.group);
+    lighting.setStudio(true, model.center, model.size);
+    bloom.strength = 0.22; bloom.threshold = 0.86;
+    setFurnishingNight(0.55);
+    // room hotspots
+    const labels = model.spots.map((sp) => {
+      const div = document.createElement('div');
+      div.className = 'room-dot';
+      div.innerHTML = `<i></i><span>${roomName(sp.n)}${sp.a ? `<b>${fmtArea(sp.a)} m²</b>` : ''}</span>`;
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tgt = sp.pos.clone(); tgt.y = model.center.y;
+        const d = Math.max(7, Math.max(sp.w, sp.d) * 1.9 + 3);
+        flyTo(tgt.clone().add(aptDir.clone().multiplyScalar(d)), tgt, 0.9);
+      });
+      const o = new CSS2DObject(div);
+      o.position.copy(sp.pos);
+      model.group.add(o);
+      return o;
+    });
+    aptView = { model, labels, apt: a };
+    // distance so the whole apartment fits the free part of the screen (right panel on desktop)
+    const freeW = innerWidth <= 760 ? innerWidth : innerWidth - 460;
+    const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (freeW / innerHeight);
+    const dist = Math.max(model.size * 1.35 + 5, (model.size * (innerWidth <= 760 ? 0.5 : 0.6)) / tanH + 2);
+    VIEWS.apt = { fixY: true, dir: aptDir, dist, min: dist * 0.35, max: dist * 1.3,
+      bmin: model.center.clone().addScalar(-model.size * 0.6), bmax: model.center.clone().addScalar(model.size * 0.6) };
+    useView(VIEWS.apt, model.center);
+    flyTo(model.center.clone().add(aptDir.clone().multiplyScalar(dist)), model.center, 1.2);
+    document.body.classList.add('apt-mode');
+    renderer.domElement.style.cursor = '';
+    ui.hideTip();
+    setTimeout(setShiftTarget, 60);
+  }
+
+  function leaveApt(toFloor = true) {
+    if (!aptView) return;
+    scene.remove(aptView.model.group);
+    aptView.labels.forEach((o) => { o.element.remove(); aptView.model.group.remove(o); });
+    aptView = null;
+    lighting.setStudio(false);
+    bld.root.visible = true; env.group.visible = true;
+    if (interior) { interior.group.visible = true; interior.labels.forEach((o) => { o.element.style.display = ''; }); }
+    document.body.classList.remove('apt-mode');
+    applyTime(true);
+    if (toFloor && selectedFloor) {
+      const target = new THREE.Vector3(0, floorBase(selectedFloor), 2);
+      useView(VIEWS.floor, target);
+      flyTo(target.clone().add(floorOffset), target, 1.2);
+    }
+    setTimeout(setShiftTarget, 60);
+  }
+
   function selectFloor(fl) {
     if (selectedFloor === fl) return;
+    if (aptView) leaveApt(false);
     if (!selectedFloor) savedView = { pos: camera.position.clone(), target: controls.target.clone() };
     removeInterior();
     setHoverFloor(null);
@@ -300,6 +370,7 @@ async function main() {
 
   function back() {
     if (!selectedFloor) return;
+    if (aptView) leaveApt(false);
     removeInterior();
     selectedFloor = null; selectedApt = null; hoveredApt = null;
     setClip(1e4);
@@ -324,15 +395,8 @@ async function main() {
     onSelectApt: (a) => {
       selectedApt = a;
       if (interior) interior.aptMeshes.forEach(paintApt);
-      if (a && interior) {
-        const m = aptMeshFor(a.id);
-        if (m) {
-          m.geometry.computeBoundingBox();
-          const c = m.geometry.boundingBox.getCenter(new THREE.Vector3());
-          c.y = floorBase(selectedFloor);
-          flyTo(c.clone().add(VIEWS.floor.dir.clone().multiplyScalar(isMobile ? 70 : 46)), c, 1.0);
-        }
-      }
+      if (a && selectedFloor) enterApt(a);
+      else if (!a) leaveApt(true);
     },
     onTime: (minutes, live) => {
       timeState.live = live;
@@ -349,6 +413,7 @@ async function main() {
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
+    if (aptView) return {};
     if (selectedFloor && interior) {
       const hit = raycaster.intersectObjects(interior.aptMeshes, false)[0];
       return { apt: hit ? hit.object.userData.apt : null };
@@ -399,6 +464,7 @@ async function main() {
     if (!selectedFloor) return { x: 0, y: 0 };
     const p = document.getElementById('floor-panel').getBoundingClientRect();
     if (innerWidth <= 760) return { x: 0, y: Math.max(0, innerHeight - p.top) / 2 - 20 };
+    if (aptView) return { x: (innerWidth - p.left) / 2 - 10, y: 0 };   // panel on the right
     return { x: -p.right / 2 + 110, y: 0 };
   }
   function setShiftTarget() { const s = panelShift(); viewShift.tx = s.x; viewShift.ty = s.y; }
@@ -471,7 +537,7 @@ async function main() {
     stepViewShift(dt);
     controls.update();
     enforceView(dt);
-    interiorLight.intensity = selectedFloor ? 0.3 + 1.2 * envNight : 0;
+    interiorLight.intensity = selectedFloor && !aptView ? 0.3 + 1.2 * envNight : 0;
     if (since > (timeState.live ? 10 : 0.25)) { since = 0; if (timeState.live) applyTime(); }
     lighting.tick(clock.elapsedTime);
     env.update(dt, envNight);
@@ -488,6 +554,7 @@ async function main() {
     live: () => { timeState.live = true; applyTime(true); }, camera, controls, renderer, scene,
     selectApt: (id) => { const fd = byFloor.get(selectedFloor); const a = fd && fd.apartments.find((x) => x.id === id); if (a) ui.selectApt(a); },
     hover: (fl) => setHoverFloor(fl),
+    aptMode: () => !!aptView,
     fps: () => renderer.info.render.frame,
     view: (x, y, z, tx, ty, tz) => { anim.active = false; camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update(); },
     ready: true,

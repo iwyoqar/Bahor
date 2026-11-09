@@ -241,16 +241,24 @@ export function createUI(data, cb) {
       </div>
       <div class="dt-mini"><div><b>${fmtArea(a.area)} m²</b><span>${a.commercial ? t('commercial') : t('roomsN', { n: a.rooms })} · ${aptMinPrice(fl, a) ? t('priceFrom', { p: fmtMln(aptMinPrice(fl, a)) }) : t('priceOnRequest')}</span></div><button class="btn small gold dt-more">${t('more')}</button></div>
       <div class="dt-area"><b>${fmtArea(a.area)}</b><span>m²</span>${a.areaT ? `<em>${t('areaTer')}: ${fmtArea(a.areaT)} m²</em>` : ''}</div>
+      ${a.commercial ? '' : `<div class="dt-stats">
+        <div><b>${rooms.filter((r) => r.n === 'bedroom').length}</b><span>${t('statBed')}</span></div>
+        <div><b>${rooms.filter((r) => r.n === 'bath' || r.n === 'wc').length}</b><span>${t('statBath')}</span></div>
+        <div><b>${fmtArea(a.areaT || a.area)}</b><span>m²</span></div>
+      </div>`}
+      <div class="dt-from">${aptMinPrice(fl, a) ? t('priceFrom', { p: fmtMoney(aptMinPrice(fl, a)) }) : t('priceOnRequest')}</div>
       ${rooms.length ? `<div class="dt-sec">${t('rooms')}</div><ul class="rooms">${roomsHTML}</ul>` : ''}
       <div class="dt-sec">${t('installment', { m: CONFIG.installmentMonths })}</div>
       ${priceHTML}
       <div class="dt-actions">
         <button class="btn ghost dt-plan">${t('plan2d')}</button>
         <a class="btn gold" href="${CONFIG.phoneHref}">${t('call')}</a>
+        <button class="btn ghost dt-tower">${t('backToBuilding')}</button>
       </div>`;
     box.classList.add('open');
     box.querySelector('.dt-back').addEventListener('click', () => selectApt(null));
     box.querySelector('.dt-plan').addEventListener('click', () => openPlan());
+    box.querySelector('.dt-tower').addEventListener('click', () => cb.onBack());
     box.querySelector('.dt-more').addEventListener('click', () => setExpanded(true));
     box.querySelectorAll('.pl-tab').forEach((b) => b.addEventListener('click', () => { state.plan = +b.dataset.plan; renderApt(a); }));
   }

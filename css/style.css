@@ -159,6 +159,26 @@ body:not(.floor-open) #tooltip.show { pointer-events: auto; }
 .dt-mini b { display: block; font-family: var(--serif); font-size: 26px; line-height: 1; }
 .dt-mini span { font-size: 12px; color: var(--gold); font-weight: 600; }
 
+/* apartment details: stats row + price headline */
+.dt-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 4px; }
+.dt-stats div { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 2px; background: rgba(255,255,255,.03); }
+.dt-stats b { font-family: var(--serif); font-size: 26px; line-height: 1; }
+.dt-stats span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.dt-from { margin-top: 10px; color: var(--gold); font-weight: 700; font-size: 15px; }
+.dt-tower { grid-column: 1 / -1; }
+
+/* isolated apartment model (dollhouse view) */
+body.apt-mode #floor-rail, body.apt-mode .cta { opacity: 0; pointer-events: none; }
+body.apt-mode #labels .apt-tag { display: none; }
+.room-dot { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 7px; transform: translateY(-4px); }
+.room-dot i { width: 14px; height: 14px; border-radius: 50%; background: #fff7e2; box-shadow: 0 0 0 4px rgba(255,247,226,.25), 0 0 16px rgba(255,214,140,.7); flex: none; }
+.room-dot span { display: grid; padding: 4px 9px; border-radius: 9px; background: rgba(14,15,18,.78); border: 1px solid rgba(255,255,255,.14); font-size: 11.5px; font-weight: 600; color: #f4efe4; white-space: nowrap; line-height: 1.25; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.room-dot b { font-size: 11px; color: var(--gold); font-weight: 700; }
+.room-dot:hover i { background: var(--gold); }
+@media (min-width: 761px) {
+  body.apt-mode #floor-panel { left: auto; right: var(--gutter); width: 400px; }
+}
+
 /* ------------------------------------------------ buttons */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 14px; font-weight: 700; font-size: 14px; text-decoration: none; border: 1px solid transparent; transition: transform .15s, filter .15s, background .2s, border-color .2s; }
 .btn.small { height: 36px; padding: 0 12px; font-size: 13px; border-radius: 11px; }
@@ -318,6 +338,8 @@ body.floor-open .cta-parking { display: none; }
   .apt-tag { padding: 3px; gap: 0; }
   .apt-tag span { display: none; }
   .apt-tag.on span { display: inline; padding: 0 6px 0 4px; }
+  .room-dot span { font-size: 10.5px; padding: 3px 7px; }
+  .room-dot b { display: none; }
   .dt-mini { display: flex; }
   #floor-panel:not(.expanded) .fp-detail { overflow: hidden; }
   #floor-panel:not(.expanded) .fp-detail > :not(.dt-head):not(.dt-mini) { display: none; }

@@ -787,49 +787,41 @@ function layShop(F, K, R) {
 // ---------------------------------------------------------------- public
 const FLOOR_MAT = { living: 'parquet', bedroom: 'parquet', hall: 'parquet', storage: 'parquet', other: 'parquet', kitchen: 'tile', bath: 'bathTile', wc: 'bathTile', balcony: 'tile', terrace: 'deck' };
 
-export function buildFurnishing(fd, base) {
-  const M_ = materials();
-  const K = new Kit(base);
-  const finishes = new Map();
-  const addFinish = (mat, poly) => { if (!finishes.has(mat)) finishes.set(mat, []); finishes.get(mat).push({ o: poly, h: [] }); };
-
-  fd.apartments.forEach((a, ai) => {
-    const R = rng(fd.floor * 1000 + ai * 37 + 11);
-    if (a.commercial || !a.rg || !a.rg.length) {
-      a.polys.forEach((p) => addFinish(a.commercial ? 'shopTile' : 'parquet', p));
-      if (a.commercial) {
-        // whole unit as one rectangle (bounding box of the largest polygon, shrunk)
-        const p = a.polys[0];
-        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-        p.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
-        const room = { r: [x0 + 0.6, y0 + 0.6, x1 - 0.6, y1 - 0.6], s: [[1, 0, []], [1, 0, []], [1, 0, []], [1, 0, []]] };
-        const F = frame(room);
-        layShop(F, K, R);
-      }
-      return;
+function furnishApartment(fd, a, ai, K, addFinish, M_) {
+  const R = rng(fd.floor * 1000 + ai * 37 + 11);
+  if (a.commercial || !a.rg || !a.rg.length) {
+    a.polys.forEach((p) => addFinish(a.commercial ? 'shopTile' : 'parquet', p));
+    if (a.commercial) {
+      // whole unit as one rectangle (bounding box of the largest polygon, shrunk)
+      const p = a.polys[0];
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      p.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+      const room = { r: [x0 + 0.6, y0 + 0.6, x1 - 0.6, y1 - 0.6], s: [[1, 0, []], [1, 0, []], [1, 0, []], [1, 0, []]] };
+      layShop(frame(room), K, R);
     }
-    const covered = [];
-    for (const room of a.rg) {
-      addFinish(FLOOR_MAT[room.n] || 'parquet', room.poly);
-      covered.push(room);
-      const F = frame(room);
-      if (F.W < 0.6 || F.D < 0.6) continue;
-      keepOuts(F);
-      switch (room.n) {
-        case 'bedroom': layBedroom(F, K, R, M_); break;
-        case 'living': layLiving(F, K, R, M_); break;
-        case 'kitchen': layKitchen(F, K, R); break;
-        case 'bath': layBath(F, K, R, false); break;
-        case 'wc': layBath(F, K, R, true); break;
-        case 'hall': layHall(F, K, R, M_); break;
-        case 'balcony': layBalcony(F, K, R); break;
-        case 'terrace': layTerrace(F, K, R); break;
-        case 'storage': layStorage(F, K, R); break;
-        default: break;
-      }
+    return;
+  }
+  for (const room of a.rg) {
+    addFinish(FLOOR_MAT[room.n] || 'parquet', room.poly);
+    const F = frame(room);
+    if (F.W < 0.6 || F.D < 0.6) continue;
+    keepOuts(F);
+    switch (room.n) {
+      case 'bedroom': layBedroom(F, K, R, M_); break;
+      case 'living': layLiving(F, K, R, M_); break;
+      case 'kitchen': layKitchen(F, K, R); break;
+      case 'bath': layBath(F, K, R, false); break;
+      case 'wc': layBath(F, K, R, true); break;
+      case 'hall': layHall(F, K, R, M_); break;
+      case 'balcony': layBalcony(F, K, R); break;
+      case 'terrace': layTerrace(F, K, R); break;
+      case 'storage': layStorage(F, K, R); break;
+      default: break;
     }
-  });
+  }
+}
 
+function assemble(K, finishes, base, M_) {
   const g = new THREE.Group();
   g.name = 'furnishing';
   for (const [mat, polys] of finishes) {
@@ -839,6 +831,16 @@ export function buildFurnishing(fd, base) {
   }
   g.add(K.build());
   return g;
+}
+
+/** furniture, carpets, appliances and floor finishes for a whole floor */
+export function buildFurnishing(fd, base, only = null) {
+  const M_ = materials();
+  const K = new Kit(base);
+  const finishes = new Map();
+  const addFinish = (mat, poly) => { if (!finishes.has(mat)) finishes.set(mat, []); finishes.get(mat).push({ o: poly, h: [] }); };
+  fd.apartments.forEach((a, ai) => { if (!only || only === a) furnishApartment(fd, a, ai, K, addFinish, M_); });
+  return assemble(K, finishes, base, M_);
 }
 
 /** night factor -> lamp shades and TV screens glow */

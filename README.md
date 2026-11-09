@@ -5,6 +5,7 @@ Bahor turar-joy majmuasi uchun interaktiv 3D sayt.
 - **3D bino.** Rejalardan olingan aniq kontur bo'yicha qurilgan neoklassik fasad: chuqur derazalar, karnizlar, pilyastrlar, fransuz balkonlari, qizil chatirli tomlar, quyosh panellari. 8- va 9-qavatlardagi pog'onali qisqarishlar ham rejadagidek.
 - **Qavat tanlash.** Sichqoncha qavat ustiga olib borilganda qavat oltin rangda yoritiladi va narxlari ko'rsatiladi. Bosilganda yuqori qavatlar olinadi va shu qavatning ichki bo'linishi ko'rinadi: rejadagi devorlar va har bir xonadonning maydoni.
 - **Jihozlangan xonalar.** Har bir qavatdagi har bir xona turiga qarab jihozlangan: mehmonxonada divan, kreslo, televizor, gilam va mehmon stoli; yotoqxonada karavot, tumbochka va chiroq, shkaf; oshxonada muzlatkich, plita, rakovina va ovqat stoli; hammomda vanna yoki dush, unitaz, rakovina, kir yuvish mashinasi; dahlizda poyabzal javoni; balkon va terrasalarda stol-stullar va o'simliklar. Pollar parket yoki kafel. Tunda chiroqlar yonadi.
+- **Xonadon maketi.** Xonadon tanlanganda bino va atrof yashirinadi, faqat shu xonadon qorong'i fonda alohida 3D maket bo'lib ochiladi: devorlar, mebel, gilamlar, iliq studiya yorug'ligi, xonalar ustida nomi va maydoni yozilgan nuqtalar (bosilsa, kamera o'sha xonaga yaqinlashadi). O'ng tomonda yotoqxona/hammom soni, maydon, narx va kalkulyator. «←» qavatga, «Binoga qaytish» bosh ko'rinishga qaytaradi.
 - **Kamera.** Bino bitta burchakdan ko'rsatiladi, aylantirib bo'lmaydi. Faqat yaqinlashtirish va uzoqlashtirish mumkin, bunda ham cheklangan masofada. Yaqinlashtirish sichqoncha turgan joyga qarab bo'ladi.
 - **Xonadon kartochkasi.** Xonalar ro'yxati va ularning maydoni, umumiy maydon (8–9-qavatlarda terrasa bilan birga), narx kalkulyatori: 30% / 50% boshlang'ich to'lov yoki to'liq to'lov, 6 oyga bo'lib to'lash.
 - **2D reja.** Vektor sxema yoki asl chizma (PDF'dan), kattalashtirish va surish mumkin.
@@ -68,6 +69,7 @@ python3 tools/extract_plans.py work/
 python3 tools/render_plans.py work/ assets/plans
 python3 tools/build_geometry.py work/ data/floors.json
 python3 tools/build_rooms.py work/ data/floors.json   # xonalarni ajratish (mebel uchun)
+python3 tools/build_apt_walls.py data/floors.json     # har bir xonadonning o'z devorlari (maket uchun)
 ```
 
 Tuzatilgan joylar:
@@ -84,6 +86,7 @@ js/config.js          narxlar, aloqa, bino parametrlari
 js/app.js             sahna, kamera, tanlash, animatsiyalar
 js/building.js        bino fasadi, tom, ichki kesim
 js/furniture.js       mebel, gilam, texnika, pol qoplamalari
+js/aptview.js         tanlangan xonadonning alohida maketi
 js/environment.js     yo'llar, daraxtlar, chiroqlar, mashinalar, hovli
 js/lighting.js        osmon, quyosh/oy, yulduzlar, kun-tun
 js/ui.js, plan2d.js   panel, xonadon kartochkasi, 2D reja

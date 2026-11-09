@@ -21,8 +21,8 @@ Xom suratlar (16:9 kompyuter, 9:16 telefon; kunduz, oltin soat, shom, tun) alohi
 
 ## 1-qadam. Bino surati — Nano Banana Pro, 16:9
 
-**Referenslar:** 1 — `desktop-16x9_3-shom-1720.png` (bino va kamera), 2 — `assets/gallery/render-1.jpg` (materiallar va uslub).
-Asosiy kadr — shom (blue hour), qo'llanmadagidek. Keyin shu kadrdan boshqa vaqtlar yasaladi (pastda).
+**Referenslar:** 1 — `desktop-16x9_1-kunduz-1230.png` (bino va kamera; kunduzgi surat eng aniq ko'rinadi, yorug'likni prompt belgilaydi), 2 — `assets/gallery/render-1.jpg` (materiallar va uslub).
+Asosiy kadr — shom (blue hour), qo'llanmadagidek. Keyin shu kadrdan boshqa vaqtlar yasaladi (pastda). Shom va tun suratlari (`_3-shom`, `_4-tun`) faqat qaysi derazalar yonganini ko'rsatish uchun kerak.
 
 ```
 Use reference 1 for the building AND the camera: keep exactly this building and this exact

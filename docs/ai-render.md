@@ -19,6 +19,16 @@ Xom suratlar (16:9 kompyuter, 9:16 telefon; kunduz, oltin soat, shom, tun) alohi
 
 ---
 
+## Higgsfield o'rniga Gemini ilovasi (Google AI Pro obunasi)
+
+Nano Banana Pro Gemini ilovasida ham bor (gemini.google.com):
+1. Model menyusidan **Thinking** (Pro) ni tanlang va **Rasm yaratish** (🍌) asbobini yoqing.
+2. «+» orqali avval bino suratini, keyin uslub rasmini yuklang.
+3. Promptdan oldin shu qatorni qo'shing: `Reference 1 is the first attached image, reference 2 is the second attached image. Output: 16:9 landscape, same framing as reference 1.`
+4. Natijani eng yuqori sifatda yuklab oling. Qayta yaratish bilan 2–3 variant oling.
+
+Videolar (3–4-qadamlar) uchun shu obunadagi Google Flow'da Veo bilan «birinchi va oxirgi kadr» rejimi Seedance o'rnini bosadi.
+
 ## 1-qadam. Bino surati — Nano Banana Pro, 16:9
 
 **Referenslar:** 1 — `desktop-16x9_1-kunduz-1230.png` (bino va kamera; kunduzgi surat eng aniq ko'rinadi, yorug'likni prompt belgilaydi), 2 — `assets/gallery/render-1.jpg` (materiallar va uslub).

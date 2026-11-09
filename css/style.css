@@ -334,7 +334,7 @@ body.floor-open .cta-parking { display: none; }
 }
 
 /* clean frame for render source images (?capture=1) */
-body.capture .topbar, body.capture #floor-rail, body.capture #hint, body.capture .cta,
+body.capture .topbar, body.capture #floor-rail, body.capture #floor-panel, body.capture #hint, body.capture .cta,
 body.capture #tooltip, body.capture #labels, body.capture #loader { display: none !important; }
 
 /* photo-real hero intro */

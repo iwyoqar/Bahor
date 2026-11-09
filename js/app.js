@@ -9,7 +9,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { CONFIG, floorBase, floorHeight } from './config.js';
 import { buildBuilding, buildInterior, createMaterials, extrudePolys, toWorld } from './building.js';
 import { buildFurnishing, setFurnishingNight } from './furniture.js';
-import { buildApartmentModel } from './aptview.js';
+import { buildApartmentModel, buildApartmentInterior, roomView } from './aptview.js';
 import { buildEnvironment } from './environment.js';
 import { createLighting } from './lighting.js';
 import { createUI } from './ui.js';
@@ -224,8 +224,9 @@ async function main() {
     controls.minDistance = v.min; controls.maxDistance = v.max;
   }
   const tmpV = new THREE.Vector3();
+  let freeCam = false;   // capture of eye-level interior frames
   function enforceView(dt) {
-    if (anim.active) return;
+    if (anim.active || freeCam) return;
     const t = controls.target;
     t.clamp(view.bmin, view.bmax);
     if (view.fixY) t.y = viewHome.y;
@@ -459,7 +460,7 @@ async function main() {
   // shift the projection centre so the building is not hidden behind the side panel
   const viewShift = { x: 0, y: 0, tx: 0, ty: 0 };
   function panelShift() {
-    if (!selectedFloor) return { x: 0, y: 0 };
+    if (!selectedFloor || capture) return { x: 0, y: 0 };
     const p = document.getElementById('floor-panel').getBoundingClientRect();
     if (innerWidth <= 760) return { x: 0, y: Math.max(0, innerHeight - p.top) / 2 - 20 };
     if (aptView) return { x: (innerWidth - p.left) / 2 - 10, y: 0 };   // panel on the right
@@ -582,6 +583,41 @@ async function main() {
   setTimeout(() => loaderEl.remove(), 900);
   if (capture || photo.enabled) camera.position.copy(startPos); else flyTo(startPos, startTarget, 3.2);
   if (photo.enabled) { layoutPhoto(); setPhoto(true, false); document.body.classList.add('photo-intro'); }
+
+  // ?capture=1&apt=6-21            -> dollhouse model of the apartment, full frame, no UI
+  // ?capture=1&apt=6-21&room=living -> eye-level photo of a room (room=living|kitchen|bedroom|bath|wc|hall, i=index)
+  if (capture && params.get('apt')) {
+    const id = params.get('apt');
+    const fd = byFloor.get(+id.split('-')[0]);
+    const a = fd && fd.apartments.find((x) => x.id === id);
+    if (a) {
+      selectFloor(fd.floor);
+      clipPlane.constant = floorBase(fd.floor) + 0.001; clipAnim.t = 1;
+      ui.selectApt(a);
+      anim.active = false;
+      const roomType = params.get('room');
+      if (!roomType) {
+        camera.position.copy(VIEWS.apt.dir.clone().multiplyScalar(VIEWS.apt.dist).add(aptView.model.center));
+        controls.target.copy(aptView.model.center);
+      } else {
+        const rooms = (a.rg || []).filter((r) => r.n === roomType);
+        const room = rooms[Math.min(+params.get('i') || 0, rooms.length - 1)];
+        if (room) {
+          aptView.model.group.visible = false;
+          aptView.labels.forEach((o) => { o.element.style.display = 'none'; });
+          const full = buildApartmentInterior(fd, a);
+          scene.add(full.group);
+          const v = roomView(fd, a, room, roomType === 'living' ? 'window' : 'door');
+          freeCam = true;
+          controls.enabled = false;
+          camera.fov = +params.get('fov') || 62; camera.updateProjectionMatrix();
+          camera.position.copy(v.pos); controls.target.copy(v.target); camera.lookAt(v.target);
+          lighting.sun.intensity = 1.2;
+        }
+      }
+      viewShift.x = viewShift.tx = 0; viewShift.y = viewShift.ty = 0; camera.clearViewOffset();
+    }
+  }
 
   const clock = new THREE.Clock();
   let since = 0;

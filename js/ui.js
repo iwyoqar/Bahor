@@ -241,7 +241,8 @@ export function createUI(data, cb) {
         <div><div class="dt-title">${a.commercial ? t('commercial') : `${t('apt')} ${t('aptNo', { n: aptNo(a) })}`}</div>
         <div class="dt-sub">${t('floor', { n: fl })}${a.commercial ? '' : ' · ' + t('roomsN', { n: a.rooms })}</div></div>
       </div>
-      <div class="dt-mini"><div><b>${fmtArea(a.area)} m²</b><span>${a.commercial ? t('commercial') : t('roomsN', { n: a.rooms })} · ${aptMinPrice(fl, a) ? t('priceFrom', { p: fmtMln(aptMinPrice(fl, a)) }) : t('priceOnRequest')}</span></div><button class="btn small gold dt-more">${t('more')}</button></div>
+      <div class="dt-mini"><div><b>${fmtArea(a.area)} m²</b><span>${a.commercial ? t('commercial') : t('roomsN', { n: a.rooms })} · ${aptMinPrice(fl, a) ? t('priceFrom', { p: fmtMln(aptMinPrice(fl, a)) }) : t('priceOnRequest')}</span></div>${tourFor(a) ? `<button class="btn small gold dt-tour dt-tour-mini" aria-label="${t('tour')}">▶</button>` : ''}<button class="btn small ${tourFor(a) ? 'ghost' : 'gold'} dt-more">${t('more')}</button></div>
+      ${tourFor(a) ? `<button class="dt-tour-hero dt-tour"><span class="pl">▶</span><span><b>${t('tour')}</b><small>${t('tourHint')}</small></span></button>` : ''}
       <div class="dt-area"><b>${fmtArea(a.area)}</b><span>m²</span>${a.areaT ? `<em>${t('areaTer')}: ${fmtArea(a.areaT)} m²</em>` : ''}</div>
       ${a.commercial ? '' : `<div class="dt-stats">
         <div><b>${rooms.filter((r) => r.n === 'bedroom').length}</b><span>${t('statBed')}</span></div>
@@ -253,7 +254,6 @@ export function createUI(data, cb) {
       <div class="dt-sec">${t('installment', { m: CONFIG.installmentMonths })}</div>
       ${priceHTML}
       <div class="dt-actions">
-        ${tourFor(a) ? `<button class="btn gold dt-tour">${t('tour')}</button>` : ''}
         <button class="btn ghost dt-plan">${t('plan2d')}</button>
         <a class="btn gold" href="${CONFIG.phoneHref}">${t('call')}</a>
         <button class="btn ghost dt-tower">${t('backToBuilding')}</button>
@@ -262,8 +262,13 @@ export function createUI(data, cb) {
     box.querySelector('.dt-back').addEventListener('click', () => selectApt(null));
     box.querySelector('.dt-plan').addEventListener('click', () => openPlan());
     box.querySelector('.dt-tower').addEventListener('click', () => cb.onBack());
-    const tb = box.querySelector('.dt-tour');
-    if (tb) tb.addEventListener('click', () => player.open(tourFor(a)));
+    box.querySelectorAll('.dt-tour').forEach((b) => b.addEventListener('click', () => player.open(tourFor(a))));
+    const chip = document.getElementById('tour-chip');
+    if (chip) {
+      const tr = tourFor(a);
+      chip.hidden = !tr;
+      chip.onclick = tr ? () => player.open(tr) : null;
+    }
     box.querySelector('.dt-more').addEventListener('click', () => setExpanded(true));
     box.querySelectorAll('.pl-tab').forEach((b) => b.addEventListener('click', () => { state.plan = +b.dataset.plan; renderApt(a); }));
   }

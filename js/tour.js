@@ -57,7 +57,7 @@ export function createTourPlayer() {
     load(cur, tour.clips[idx]);
     cur.currentTime = 0;
     cur.classList.add('on'); nxt.classList.remove('on');
-    cur.play().catch(() => {});
+    tryPlay(cur);
     load(nxt, tour.clips[idx + 1]);   // preload the next clip
     chapters.querySelectorAll('button').forEach((b, k) => b.classList.toggle('on', k === idx));
   }
@@ -68,9 +68,21 @@ export function createTourPlayer() {
     show(idx + 1);
   }
 
+  const playBtn = $('#tour-play');
+  const wait = $('#tour-wait');
+  function tryPlay(v) {
+    playBtn.hidden = true;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => { if (v === vids[front] && tour) playBtn.hidden = false; });
+  }
+  playBtn.addEventListener('click', () => tryPlay(vids[front]));
   vids.forEach((v) => {
-    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.preload = 'auto';
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
     v.addEventListener('ended', () => { if (v === vids[front]) next(); });
+    v.addEventListener('waiting', () => { if (v === vids[front]) wait.classList.add('on'); });
+    v.addEventListener('playing', () => { if (v === vids[front]) { wait.classList.remove('on'); playBtn.hidden = true; } });
+    v.addEventListener('error', () => { if (v === vids[front]) { wait.classList.remove('on'); playBtn.hidden = false; } });
   });
 
   function open(tr) {
@@ -90,6 +102,7 @@ export function createTourPlayer() {
 
   function close() {
     root.classList.remove('open');
+    playBtn.hidden = true; wait.classList.remove('on');
     vids.forEach((v) => { v.pause(); });
     tour = null;
   }

@@ -68,6 +68,7 @@
     <div class="fp-detail" id="fp-detail"></div>
   </section>
 
+  <button id="tour-chip" class="tour-chip" hidden><span>▶</span><b data-t="tour"></b></button>
   <div id="tooltip" role="tooltip"></div>
 
   <div id="hint"><span class="dot"></span><span id="hint-text"></span></div>
@@ -94,7 +95,9 @@
   </div>
 
   <div id="tour" class="modal" aria-label="video tour">
-    <video></video><video></video>
+    <video muted playsinline webkit-playsinline preload="auto"></video><video muted playsinline webkit-playsinline preload="auto"></video>
+    <div class="tour-wait" id="tour-wait"><i></i></div>
+    <button class="tour-play" id="tour-play" hidden aria-label="play">▶</button>
     <div class="tour-top">
       <div><div class="tour-title" id="tour-title"></div><div class="tour-note" id="tour-note"></div></div>
       <button class="icon-btn" id="tour-close" aria-label="close">✕</button>

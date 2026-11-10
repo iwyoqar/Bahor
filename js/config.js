@@ -40,6 +40,22 @@ export const CONFIG = {
   commercialPriceOnRequest: true,
   parkingPrice: 150000000,
 
+  // Namunaviy xonadonlar bo'ylab video sayohat (Google Flow / Veo videolari).
+  // Kalit — namunaviy xonadon; shu rejadagi boshqa qavatlardagi xonadonlarda ham tugma chiqadi.
+  // Video qo'shish: faylni assets/tour/<id>/ ga qo'ying va clips ga yozing. Bo'sh ro'yxat — tugma yo'q.
+  tours: {
+    '6-21': { title: '3 xonali · 123 m²', clips: [
+      // key — klip qaysi xonada tugaydi (bo'lim nomi shundan olinadi)
+      // { key: 'flight', src: 'assets/tour/6-21/flight.mp4' },          // binodan mehmonxonaga
+      // { key: 'hall', src: 'assets/tour/6-21/living-hall.mp4' },
+      // { key: 'kitchen', src: 'assets/tour/6-21/hall-kitchen.mp4' },
+      // { key: 'bedroom', src: 'assets/tour/6-21/kitchen-bedroom.mp4' },
+      // { key: 'bath', src: 'assets/tour/6-21/bedroom-bath.mp4' },
+    ] },
+    '6-20': { title: '2 xonali · 84 m²', clips: [] },
+    '6-19': { title: '1 xonali · 53 m²', clips: [] },
+  },
+
   // Bino geometriyasi (metr)
   plinth: 0.45,
   floorHeights: [4.2, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3],

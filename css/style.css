@@ -340,3 +340,16 @@ body.capture #tooltip, body.capture #labels, body.capture #loader { display: non
 /* photo-real hero intro */
 body.photo-intro #hero-photo { animation: heroIn 1.8s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes heroIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+
+/* video tour */
+#tour { background: #050506; }
+#tour video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .25s; background: #050506; }
+#tour video.on { opacity: 1; }
+.tour-top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; padding: var(--gutter); background: linear-gradient(180deg, rgba(0,0,0,.55), transparent); z-index: 2; }
+.tour-title { font-family: var(--serif); font-size: 28px; font-weight: 700; }
+.tour-note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.tour-chapters { position: absolute; left: 50%; bottom: calc(var(--gutter) + 6px); transform: translateX(-50%); display: flex; gap: 6px; padding: 6px; border-radius: 14px; background: rgba(18,20,24,.72); border: 1px solid var(--line); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 2; max-width: calc(100vw - 2 * var(--gutter)); overflow-x: auto; scrollbar-width: none; }
+.tour-chapters button { flex: none; border: 0; border-radius: 10px; padding: 8px 14px; background: transparent; color: var(--muted); font-weight: 600; font-size: 13px; }
+.tour-chapters button.on { background: var(--gold); color: #1d1a12; }
+.dt-tour { grid-column: 1 / -1; }
+.dt-tour::before { content: '▶'; font-size: 11px; }

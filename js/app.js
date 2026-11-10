@@ -607,12 +607,15 @@ async function main() {
           aptView.labels.forEach((o) => { o.element.style.display = 'none'; });
           const full = buildApartmentInterior(fd, a);
           scene.add(full.group);
-          const v = roomView(fd, a, room, roomType === 'living' ? 'window' : 'door');
+          const v = roomView(fd, a, room, params.get('kind') || (roomType === 'living' || roomType === 'kitchen' ? 'window' : 'door'));
           freeCam = true;
           controls.enabled = false;
-          camera.fov = +params.get('fov') || 62; camera.updateProjectionMatrix();
+          camera.fov = +params.get('fov') || v.fov; camera.updateProjectionMatrix();
           camera.position.copy(v.pos); controls.target.copy(v.target); camera.lookAt(v.target);
           lighting.sun.intensity = 1.2;
+          renderer.toneMappingExposure = 0.42;
+          bloom.strength = 0.08;
+          scene.background = new THREE.Color(0xd9e6f2);   // daylight seen through the window openings
         }
       }
       viewShift.x = viewShift.tx = 0; viewShift.y = viewShift.ty = 0; camera.clearViewOffset();

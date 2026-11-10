@@ -3,6 +3,7 @@ import { CONFIG } from './config.js';
 import { t, setLang, getLang, onLang, fmtMoney, fmtMln, fmtArea, roomName } from './i18n.js';
 import { floorPrices, minPerM2, aptPrice, aptMinPrice } from './pricing.js';
 import { PlanViewer } from './plan2d.js';
+import { createTours, createTourPlayer } from './tour.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -17,6 +18,8 @@ export function createUI(data, cb) {
   const panel = $('#floor-panel');
   const tooltip = $('#tooltip');
   const planModal = $('#plan-modal');
+  const tourFor = createTours(data);
+  const player = createTourPlayer();
   const viewer = new PlanViewer($('#plan-host'), {
     onHover: (a) => { cb.onHoverApt(a); viewer.highlight(a ? a.id : null); showAptTip(a); },
     onSelect: (a) => { selectApt(a); },
@@ -250,6 +253,7 @@ export function createUI(data, cb) {
       <div class="dt-sec">${t('installment', { m: CONFIG.installmentMonths })}</div>
       ${priceHTML}
       <div class="dt-actions">
+        ${tourFor(a) ? `<button class="btn gold dt-tour">${t('tour')}</button>` : ''}
         <button class="btn ghost dt-plan">${t('plan2d')}</button>
         <a class="btn gold" href="${CONFIG.phoneHref}">${t('call')}</a>
         <button class="btn ghost dt-tower">${t('backToBuilding')}</button>
@@ -258,6 +262,8 @@ export function createUI(data, cb) {
     box.querySelector('.dt-back').addEventListener('click', () => selectApt(null));
     box.querySelector('.dt-plan').addEventListener('click', () => openPlan());
     box.querySelector('.dt-tower').addEventListener('click', () => cb.onBack());
+    const tb = box.querySelector('.dt-tour');
+    if (tb) tb.addEventListener('click', () => player.open(tourFor(a)));
     box.querySelector('.dt-more').addEventListener('click', () => setExpanded(true));
     box.querySelectorAll('.pl-tab').forEach((b) => b.addEventListener('click', () => { state.plan = +b.dataset.plan; renderApt(a); }));
   }

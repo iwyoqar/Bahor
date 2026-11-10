@@ -83,7 +83,7 @@ export function buildApartmentInterior(fd, apt) {
   for (const r of apt.rg || []) {
     const [x0, y0, x1, y1] = r.r;
     const area = (x1 - x0) * (y1 - y0);
-    const L = new THREE.PointLight(0xffdcb4, 6 + area * 1.2, 12, 1.6);
+    const L = new THREE.PointLight(0xffdcb4, 2 + area * 0.3, 9, 1.8);
     L.position.copy(toWorld((x0 + x1) / 2, (y0 + y1) / 2, base + ROOM_H - 0.35));
     g.add(L);
   }
@@ -136,11 +136,13 @@ export function roomView(fd, apt, room, kind) {
     if (bestRun <= 0) k = opp;
   }
   const s = sides[k];
-  const inset = Math.min(0.45, s.depth * 0.2);
-  const side0 = Math.min(0.55, s.len * 0.2);
+  // stand in the corner, clear of counters / wardrobes along the walls, and look across the diagonal
+  const inset = Math.min(0.75, s.depth * 0.25);
+  const side0 = Math.min(0.75, s.len * 0.25);
   const cx = s.start[0] + s.dir[0] * side0 + s.in[0] * inset;
   const cy = s.start[1] + s.dir[1] * side0 + s.in[1] * inset;
   const tx = s.start[0] + s.dir[0] * (s.len - 0.3) + s.in[0] * (s.depth - 0.3);
   const ty = s.start[1] + s.dir[1] * (s.len - 0.3) + s.in[1] * (s.depth - 0.3);
-  return { pos: toWorld(cx, cy, base + 1.45), target: toWorld(tx, ty, base + 1.0) };
+  const small = Math.min(s.len, s.depth) < 3.2;
+  return { pos: toWorld(cx, cy, base + 1.5), target: toWorld(tx, ty, base + 1.0), fov: small ? 74 : 64 };
 }

@@ -151,3 +151,71 @@ Videolar va renderlar tayyor bo'lgach:
 Fayllarni menga quyidagicha nomlab yuboring:
 `hero_kunduz.png`, `hero_oltin.png`, `hero_shom.png`, `hero_tun.png` (+ `_mobile` varianti),
 `interior_living.png`, `flight.mp4`, `room_1_living.mp4`, `room_2_kitchen.mp4`, …
+
+
+---
+
+# Interyer va video sayohat (Gemini + Google Flow)
+
+Namunaviy xonadonlar: **6-21** (3 xonali, 123 m², old fasad va sharqiy fasad burchagida — bosh rasmda kameraga eng yaqin burchak), **6-20** (2 xonali, 84 m²), **6-19** (1 xonali, 53 m²). Shu rejadagi boshqa qavatlardagi xonadonlarda ham «Video sayohat» tugmasi chiqadi.
+
+Xom suratlar 3D modeldan olingan: xonaning shakli, deraza va eshik o'rinlari, mebel joylashuvi rejadagidek. Och-havorang ochiqliklar — derazalar, kulrang/qora ochiqliklar — eshiklar. Fayl nomlari: `6-21_living.png`, `6-21_kitchen.png`, `6-21_bedroom-1.png`, `6-21_bath.png`, … va umumiy ko'rinish `6-21_dollhouse.png`.
+
+## A. Xonalar fotosi — Gemini (Nano Banana Pro), 16:9
+
+**1. Mehmonxona** (uchishning oxirgi kadri). 1-rasm — `6-21_living.png`, 2-rasm — mebel/uslub namunasi (o'zingiz tanlagan interyer rasmi; bo'lmasa 2-rasmsiz).
+
+```
+Reference 1 is the first attached image: an untextured 3D preview of a real apartment room.
+Turn it into a photorealistic interior photograph. Keep EXACTLY the same camera position,
+angle, lens and framing, the same room shape and ceiling height, the same wall, door and
+window openings and the same furniture layout: every piece stays where it is in reference 1.
+The light-blue openings are tall windows with slim graphite frames and a view of a green
+Tashkent neighbourhood in daylight; the grey and dark openings are doorways.
+Style: modern classic Uzbek family apartment: warm oak parquet, warm white walls with thin
+classical mouldings and a cornice, a large hand-knotted Uzbek carpet in deep red and navy,
+a comfortable fabric sofa and armchairs, a TV wall, a brass and glass chandelier, soft
+daylight from the windows plus warm 2700K lamps. Use reference 2 only for the furniture
+style and materials.
+Real estate photography, Sony A7R V, 20mm, f/8, everything sharp, natural colours.
+Avoid: people, text, logos, fisheye, oversaturation, CGI look, changing the room layout.
+Output: 16:9 landscape, same framing as reference 1.
+```
+
+**2. Qolgan xonalar.** 1-rasm — xona surati, 2-rasm — tayyor mehmonxona fotosi (materiallar bir xil bo'lishi uchun). Yuqoridagi promptda `Style:` qatorini xona turiga qarab almashtiring:
+
+| Xona | `Style:` qatori |
+|---|---|
+| oshxona (`kitchen`) | a built-in kitchen along the same wall as in reference 1 with the fridge, sink and cooktop, stone worktop, warm white cabinets, a dining table with chairs, the same parquet/tiles and light as reference 2 |
+| yotoqxona (`bedroom`) | a double bed with soft bedding, nightstands with lamps, a built-in wardrobe, a small Uzbek carpet, the same parquet, walls and light as reference 2 |
+| hammom (`bath`) | a bathtub, wall-hung toilet, vanity with a mirror, washing machine, light marble-look tiles, warm lighting, matching the materials of reference 2 |
+| dahliz (`hall`) | an entrance hall with a shoe cabinet, mirror, coat rack and a runner carpet, the same parquet, walls and light as reference 2 |
+
+## B. Videolar — Google Flow (Veo), «Frames to Video», 16:9
+
+Har bir video: **birinchi kadr** va **oxirgi kadr** yuklanadi.
+
+**1. Uchib kirish.** Birinchi kadr — bosh rasm (`assets/hero/hero-desktop.jpg` yoki kunduzgi versiyasi), oxirgi kadr — 6-21 mehmonxona fotosi.
+
+```
+One single continuous drone shot, no cuts, no dissolves. The first second holds the first
+frame exactly, then the camera starts moving slowly towards the white neoclassical
+residential building. It flies forward and slightly down towards the 6th floor at the
+corner of the building nearest to the camera, smoothly accelerating. As it approaches, the
+cornices, pilasters and window surrounds grow larger and the windows of that floor fill
+the frame. The camera slows down, passes through the open tall window and comes to rest
+inside the living room, matching the last frame exactly. The facade and glass stay solid
+and in place; the transition is a real camera movement, not a dissolve. Steady gimbal
+movement, no rotation, no shaking, constant light.
+```
+
+**2. Xonadan xonaga.** Birinchi kadr — oldingi xona fotosi, oxirgi kadr — keyingi xona fotosi. Tartib: mehmonxona → dahliz → oshxona → yotoqxona → hammom.
+
+```
+One continuous steady gimbal shot at eye level, no cuts, no dissolves. The camera starts
+exactly on the first frame, turns gently and walks through the doorway into the next room,
+and comes to rest exactly on the last frame. Walls, furniture, materials and light stay
+the same throughout. Calm, slow real estate walkthrough, no people, no text.
+```
+
+Videolarni MP4 qilib yuklab oling va shunday nomlang: `flight.mp4`, `living-hall.mp4`, `hall-kitchen.mp4`, `kitchen-bedroom.mp4`, `bedroom-bath.mp4`. Menga yuboring yoki `assets/tour/6-21/` papkasiga qo'ying — `js/config.js` dagi `tours` ro'yxatiga yozib, saytga ulayman.

@@ -49,8 +49,8 @@ export const CONFIG = {
       // { key: 'flight', src: 'assets/tour/6-21/flight.mp4' },          // binodan mehmonxonaga
       { from: 'living', key: 'hall', src: 'assets/tour/6-21/living-hall.mp4', poster: 'assets/tour/6-21/living.jpg' },
       { from: 'hall', key: 'kitchen', src: 'assets/tour/6-21/hall-kitchen.mp4', poster: 'assets/tour/6-21/hall.jpg' },
-      // { key: 'bedroom', src: 'assets/tour/6-21/kitchen-bedroom.mp4' },
-      // { key: 'bath', src: 'assets/tour/6-21/bedroom-bath.mp4' },
+      { from: 'kitchen', key: 'bedroom', src: 'assets/tour/6-21/kitchen-bedroom.mp4', poster: 'assets/tour/6-21/kitchen.jpg' },
+      { from: 'bedroom', key: 'bath', src: 'assets/tour/6-21/bedroom-bath.mp4', poster: 'assets/tour/6-21/bedroom.jpg' },
     ] },
     '6-20': { title: '2 xonali · 84 m²', clips: [] },
     '6-19': { title: '1 xonali · 53 m²', clips: [] },

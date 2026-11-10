@@ -47,7 +47,7 @@ export const CONFIG = {
     '6-21': { title: '3 xonali · 123 m²', clips: [
       // key — klip qaysi xonada tugaydi (bo'lim nomi shundan olinadi)
       // { key: 'flight', src: 'assets/tour/6-21/flight.mp4' },          // binodan mehmonxonaga
-      // { key: 'hall', src: 'assets/tour/6-21/living-hall.mp4' },
+      { from: 'living', key: 'hall', src: 'assets/tour/6-21/living-hall.mp4', poster: 'assets/tour/6-21/living.jpg' },
       // { key: 'kitchen', src: 'assets/tour/6-21/hall-kitchen.mp4' },
       // { key: 'bedroom', src: 'assets/tour/6-21/kitchen-bedroom.mp4' },
       // { key: 'bath', src: 'assets/tour/6-21/bedroom-bath.mp4' },

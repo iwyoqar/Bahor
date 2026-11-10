@@ -35,11 +35,19 @@ export function createTourPlayer() {
   const chapters = $('#tour-chapters');
   let tour = null, idx = 0, front = 0;
 
-  const label = (c) => (c.key === 'flight' ? t('tourFlight') : roomName(c.key) || c.key);
+  const label = (c) => {
+    if (c.key === 'flight') return t('tourFlight');
+    const to = roomName(c.key) || c.key;
+    return c.from ? `${roomName(c.from)} → ${to}` : to;
+  };
 
   function load(v, clip) {
     if (!clip) { v.removeAttribute('src'); return; }
-    if (v.dataset.src !== clip.src) { v.dataset.src = clip.src; v.src = clip.src; v.load(); }
+    if (v.dataset.src !== clip.src) {
+      v.dataset.src = clip.src;
+      if (clip.poster) v.poster = clip.poster; else v.removeAttribute('poster');
+      v.src = clip.src; v.load();
+    }
   }
 
   function show(i) {

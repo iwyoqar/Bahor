@@ -45,6 +45,10 @@ Asosiy ko'rinishni AI render bilan almashtirish bo'yicha qo'llanma va promptlar:
 
 Bosh ko'rinishda binoni tortib aylantirish (kompyuter va telefon): fotoreal kadrlar ketma-ketligi, ustida 3D'dan olingan qavat yoritilishi. Tayyorlash bo'yicha qo'llanma va promptlar: [docs/orbit-360.md](docs/orbit-360.md). `assets/orbit/` da fotoreal kadrlar (Nano Banana suratlari + Kling kliplari) turadi, aylanish yoqilgan (`CONFIG.orbit.enabled`); o'chirish uchun `?orbit=0`.
 
+## Qavatlarning fotoreal suratlari
+
+Qavat tanlanganda 3D kesim o'rniga shu qavatning 4K fotoreal surati ochiladi (`assets/floors/`): surish, yaqinlashtirish, ustida xonadonlar yoritilishi va raqamlari. Qo'llanma va prompt: [docs/floor-photos.md](docs/floor-photos.md).
+
 ## Narx va aloqa ma'lumotlarini o'zgartirish
 
 Hammasi `js/config.js` faylida:

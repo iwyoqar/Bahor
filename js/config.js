@@ -24,6 +24,13 @@ export const CONFIG = {
   // frames — kadrlar soni (0000.webp ...), stops — to'xtash nuqtalari (qavat yoritilishi shu burchaklarda aniq tushadi),
   // stills — to'xtash nuqtalari uchun tiniq suratlar bor-yo'qligi (still-1.jpg ...; 0-nuqta — hero surati).
   // enabled: false bo'lsa ham ?orbit=1 bilan sinab ko'rish mumkin. Qo'llanma: docs/orbit-360.md
+  // Qavatning fotoreal surati (qavat tanlanganda 3D kesim o'rniga): bitta kamera, kvadrat kadr.
+  // Kamera qavat markazidan dir yo'nalishida dist masofada, fov — vertikal ko'rish burchagi.
+  // floors — surati tayyor qavatlar (assets/floors/floor-N.jpg). Qo'llanma: docs/floor-photos.md
+  floorPhoto: { dir: 'assets/floors', ext: 'jpg', cam: [8, 150, 82], dist: 200, fov: 40,
+    bbox: [0.22, 0.33, 0.78, 0.69],   // bino suratning qaysi qismida (birinchi ko'rinish shu qismni ekranga sig'diradi)
+    floors: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
+
   orbit: { enabled: true, dir: 'assets/orbit', frames: 160, ext: 'webp', stops: 8, stills: true, degPerPx: 0.22 },
 
   // Narxlar: 1 m² uchun, so'mda. 6 oylik muddatli to'lov.

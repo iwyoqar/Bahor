@@ -27,6 +27,13 @@ body.photo #hero { display: block; }
 #hero-bg { position: absolute; left: -10%; top: -10%; width: 120%; height: 120%; display: none; object-fit: cover; filter: blur(26px) brightness(.5) saturate(1.15); pointer-events: none; }
 body.photo-fit #hero-bg { display: block; }
 #hero-orbit { position: absolute; display: block; visibility: hidden; pointer-events: none; }
+/* photo-real floor: slid and zoomed with transform (js: plate*) */
+#plate { position: fixed; inset: 0; overflow: hidden; display: none; background: #1b1d1a; }
+#plate img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+body.plate #plate { display: block; animation: plateIn .45s ease both; }
+@keyframes plateIn { from { opacity: 0; } to { opacity: 1; } }
+body.plate #scene canvas { cursor: grab; }
+body.plate #scene canvas:active { cursor: grabbing; }
 #hero-orbit.on { visibility: visible; }
 body.orbit-on.photo #scene canvas { cursor: grab; }
 body.orbit-drag #scene canvas { cursor: grabbing !important; }

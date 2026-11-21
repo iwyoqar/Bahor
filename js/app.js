@@ -156,6 +156,7 @@ async function main() {
   let selectedApt = null;
   let interior = null;        // { group, aptMeshes, labels }
   const interiors = new Map();
+  const PLATE_LAYER = 2;      // the flat apartment overlays also live here: drawn alone over a floor photo
   let savedView = null;
 
   function setHoverFloor(fl) {
@@ -206,6 +207,7 @@ async function main() {
       labels.set(a.id, o);
     });
     it.labels = labels;
+    it.aptMeshes.forEach((m) => m.layers.enable(PLATE_LAYER));
     interiors.set(fl, it);
     return it;
   }
@@ -239,7 +241,7 @@ async function main() {
   const tmpV = new THREE.Vector3();
   let freeCam = false;   // capture of eye-level interior frames
   function enforceView(dt) {
-    if (anim.active || freeCam) return;
+    if (anim.active || freeCam || plate.active) return;
     const t = controls.target;
     t.clamp(view.bmin, view.bmax);
     if (view.fixY) t.y = viewHome.y;
@@ -305,6 +307,7 @@ async function main() {
   function enterApt(a) {
     if (aptView && aptView.apt.id === a.id) return;
     if (aptView) leaveApt(false);
+    plateOff();   // the apartment opens as a 3D model
     const fd = byFloor.get(selectedFloor);
     let model = aptModels.get(a.id);
     if (!model) { model = buildApartmentModel(fd, a); aptModels.set(a.id, model); }
@@ -360,6 +363,7 @@ async function main() {
       const target = new THREE.Vector3(0, floorBase(selectedFloor), 2);
       useView(VIEWS.floor, target);
       flyTo(target.clone().add(floorOffset), target, 1.2);
+      if (hasPlate(selectedFloor)) plateOn(selectedFloor);
     }
     setTimeout(setShiftTarget, 60);
   }
@@ -380,7 +384,13 @@ async function main() {
     setClip(base + 0.001);
     const target = new THREE.Vector3(0, base, 2);
     useView(VIEWS.floor, target);
-    flyTo(target.clone().add(floorOffset), target);
+    // a floor with a photo: the photo takes over once it is decoded (from one photo to the next without a flight)
+    if (hasPlate(fl) && plate.active) plateOn(fl);
+    else {
+      if (!hasPlate(fl)) plateOff();
+      flyTo(target.clone().add(floorOffset), target);
+      if (hasPlate(fl)) plateOn(fl);
+    }
     ui.openFloor(fl);
     setTimeout(setShiftTarget, 60);
     document.body.classList.add('cutaway');
@@ -400,6 +410,7 @@ async function main() {
   function back() {
     if (!selectedFloor) return;
     if (aptView) leaveApt(false);
+    plateOff();
     removeInterior();
     selectedFloor = null; selectedApt = null; hoveredApt = null;
     setClip(1e4);
@@ -450,6 +461,7 @@ async function main() {
   const el = renderer.domElement;
   el.addEventListener('pointermove', (e) => {
     lastPointer = { x: e.clientX, y: e.clientY };
+    if (plate.active && plateMove(e)) return;    // floor photo: drag slides it, two fingers zoom
     const touch = e.pointerType === 'touch';
     if (touch && !orbitOn()) return;
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > (touch ? 8 : 4)) {
@@ -475,17 +487,19 @@ async function main() {
   });
   el.addEventListener('pointerleave', () => { if (spin.drag) return; if (!selectedFloor) setHoverFloor(null); ui.hideTip(); });
   el.addEventListener('pointerdown', (e) => {
-    downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (!downAt || !plate.active) downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (plate.active) plateDown(e);
     if (orbitOn()) { orbit.more(); try { el.setPointerCapture(e.pointerId); } catch (_) { /* older browsers */ } }
   });
-  el.addEventListener('pointercancel', () => { downAt = null; endSpin(); });
+  el.addEventListener('pointercancel', (e) => { downAt = null; endSpin(); plateUp(e); });
   el.addEventListener('pointerup', (e) => {
     if (spin.drag) { downAt = null; endSpin(); return; }
-    if (!downAt) return;
+    const dragged = plateUp(e);
+    if (!downAt || dragged === null) return;    // a finger of a pinch is still down
     const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
     const quick = performance.now() - downAt.t < 600;
     downAt = null;
-    if (moved > 6 || !quick || spin.anim) return;
+    if (moved > 6 || !quick || spin.anim || dragged) return;
     const p = pick(e);
     if (selectedFloor) {
       if (p.apt) ui.selectApt(p.apt);
@@ -513,6 +527,7 @@ async function main() {
   function setShiftTarget() { const s = panelShift(); viewShift.tx = s.x; viewShift.ty = s.y; }
   function applyViewOffset() {
     const w = innerWidth, h = innerHeight;
+    if (plate.active) { clampPlate(); applyPlate(); return; }
     if (photo.active) {
       if (photo.z > 1.0001 || photo.sy) camera.setViewOffset(w, h, photo.x0, photo.y0 + photo.sy, w / photo.z, h / photo.z);
       else camera.clearViewOffset();
@@ -589,7 +604,12 @@ async function main() {
     if (document.querySelector('.modal.open')) return;
     const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
     if (!dir) return;
-    if (selectedFloor) { e.preventDefault(); panStep(dir[0], dir[1]); return; }
+    if (selectedFloor) {
+      e.preventDefault();
+      if (plate.active) platePan(-dir[0] * innerWidth * 0.15, dir[1] * innerHeight * 0.15);
+      else panStep(dir[0], dir[1]);
+      return;
+    }
     if (dir[0]) { orbit.more(); spinStep(dir[0]); }
   });
   // ------------------------------------------------ photo-real hero (desktop home view)
@@ -672,10 +692,132 @@ async function main() {
     }
   }
   el.addEventListener('wheel', (e) => {
+    if (plate.active) { e.preventDefault(); plateZoom(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); return; }
     if (!photo.active) return;
     e.preventDefault();
     photoZoom(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
   }, { passive: false });
+
+  // ------------------------------------------------ photo-real floor (CONFIG.floorPhoto): a square photo of the
+  // cut-away floor taken from a fixed camera; it is slid and zoomed like a map, and the 3D camera follows it
+  // through setViewOffset, so the apartment overlays and number tags stay on their rooms.
+  const FP = CONFIG.floorPhoto || {};
+  const plateEl = document.getElementById('plate');
+  let plateImg = document.getElementById('plate-img');
+  const plate = { active: false, want: null, n: 1, s: 1, x: 0, y: 0, minS: 1, dragged: false };
+  const hasPlate = (fl) => !capture && (FP.floors || []).includes(fl);
+  const plateSrc = (fl) => `${FP.dir}/floor-${fl}.${FP.ext || 'jpg'}`;
+  function aimPlate(fl) {
+    const t = new THREE.Vector3(0, floorBase(fl), 2);
+    anim.active = false;
+    controls.target.copy(t);
+    camera.position.copy(t).add(new THREE.Vector3(...FP.cam).setLength(FP.dist));
+    camera.lookAt(t); camera.updateMatrixWorld();
+    clipPlane.constant = floorBase(fl) + 0.001; clipAnim.t = 1;
+  }
+  /** the part of the screen not covered by the floor panel and the floor buttons */
+  function freeRect() {
+    const W = innerWidth, H = innerHeight;
+    const p = document.getElementById('floor-panel'), r = document.getElementById('floor-rail');
+    if (W <= 760) {
+      const top = document.querySelector('.topbar');
+      return { l: 0, r: W, t: top.offsetTop + top.offsetHeight, b: Math.min(r.offsetTop, p.offsetTop, H) };
+    }
+    const L = p.offsetLeft + p.offsetWidth;
+    return { l: L, r: r.offsetLeft > L ? r.offsetLeft : W, t: 0, b: H };
+  }
+  function clampPlate() {
+    const W = innerWidth, H = innerHeight;
+    plate.minS = Math.max(W, H) / plate.n;              // the photo always covers the screen
+    const maxS = Math.max(plate.minS * 2, 1.25);
+    plate.s = Math.min(maxS, Math.max(plate.minS, plate.s));
+    const S = plate.n * plate.s;
+    plate.x = Math.min(0, Math.max(W - S, plate.x));
+    plate.y = Math.min(0, Math.max(H - S, plate.y));
+  }
+  function applyPlate() {
+    plateImg.style.transform = `translate(${plate.x}px, ${plate.y}px) scale(${plate.s})`;
+    const S = plate.n * plate.s;
+    camera.aspect = 1; camera.fov = FP.fov;
+    camera.setViewOffset(S, S, -plate.x, -plate.y, innerWidth, innerHeight);
+    camera.updateProjectionMatrix();
+  }
+  /** first framing: the building fills the free part of the screen */
+  function plateFit() {
+    const n = plate.n, f = freeRect();
+    const B = FP.bbox || [0.2, 0.3, 0.8, 0.7];          // building in the photo, fractions of its side
+    plate.s = Math.min(((f.r - f.l) * 0.94) / ((B[2] - B[0]) * n), ((f.b - f.t) * 0.94) / ((B[3] - B[1]) * n));
+    clampPlate();
+    plate.x = (f.l + f.r) / 2 - ((B[0] + B[2]) / 2) * n * plate.s;
+    plate.y = (f.t + f.b) / 2 - ((B[1] + B[3]) / 2) * n * plate.s;
+    clampPlate(); applyPlate();
+  }
+  function plateZoom(cx, cy, k) {
+    const px = (cx - plate.x) / plate.s, py = (cy - plate.y) / plate.s;   // the point under the cursor stays put
+    plate.s *= k; clampPlate();
+    plate.x = cx - px * plate.s; plate.y = cy - py * plate.s;
+    clampPlate(); applyPlate();
+  }
+  function platePan(dx, dy) { plate.x += dx; plate.y += dy; clampPlate(); applyPlate(); }
+  function plateOn(fl) {
+    plate.want = fl;
+    if (plate.active) aimPlate(fl);                      // from one floor photo to the next: no flight
+    const src = plateSrc(fl);
+    const go = (im) => {
+      if (plate.want !== fl || selectedFloor !== fl || aptView) return;
+      if (im !== plateImg) { im.id = 'plate-img'; im.alt = ''; im.draggable = false; plateImg.replaceWith(im); plateImg = im; }
+      plate.n = im.naturalWidth;
+      if (!plate.active) { plate.active = true; document.body.classList.add('plate'); controls.enabled = false; }
+      aimPlate(fl); setHoverApt(null);
+      plateFit();
+    };
+    if (plateImg.getAttribute('src') === src && plateImg.naturalWidth) { go(plateImg); return; }
+    const im = new Image();
+    im.decoding = 'async'; im.src = src;
+    im.decode().then(() => go(im), () => console.warn('floor photo', src));
+  }
+  function plateOff() {
+    plate.want = null;
+    if (!plate.active) return;
+    plate.active = false;
+    document.body.classList.remove('plate');
+    camera.clearViewOffset(); camera.aspect = innerWidth / innerHeight; updateFov();
+    controls.enabled = !photo.active;
+    applyViewOffset();
+  }
+  // pointers on the floor photo: one drags, two pinch
+  const ptrs = new Map();
+  let pinch = 0, panLast = null;
+  function plateDown(e) {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 1) plate.dragged = false;
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+    panLast = { x: e.clientX, y: e.clientY };
+    try { el.setPointerCapture(e.pointerId); } catch (_) { /* older browsers */ }
+  }
+  function plateMove(e) {
+    if (!ptrs.has(e.pointerId)) return false;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size >= 2 && pinch) {
+      const [a, b] = [...ptrs.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      plateZoom((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch);
+      pinch = d; plate.dragged = true; ui.hideTip();
+      return true;
+    }
+    if (!plate.dragged && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) { plate.dragged = true; ui.hideTip(); }
+    if (plate.dragged) platePan(e.clientX - panLast.x, e.clientY - panLast.y);
+    panLast = { x: e.clientX, y: e.clientY };
+    return plate.dragged;
+  }
+  /** null while another finger is still down, otherwise whether the gesture moved the photo */
+  function plateUp(e) {
+    if (!ptrs.has(e.pointerId)) return false;
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = 0;
+    if (ptrs.size) { panLast = { ...[...ptrs.values()][0] }; return null; }
+    return plate.dragged;
+  }
 
   // ------------------------------------------------ resize
   function resize() {
@@ -799,7 +941,16 @@ async function main() {
     lighting.tick(clock.elapsedTime);
     env.update(dt, envNight);
     // keep shadow camera centred on the view target
-    if (photo.active) {
+    if (plate.active) {
+      // floor photo: only the apartment overlays (hover / selection) are drawn over it
+      renderer.setRenderTarget(null);
+      renderer.setClearColor(0x000000, 0);
+      renderer.clear();
+      const bg = scene.background;
+      scene.background = null; camera.layers.set(PLATE_LAYER);
+      renderer.render(scene, camera);
+      scene.background = bg; camera.layers.set(0);
+    } else if (photo.active) {
       renderer.setRenderTarget(null);
       renderer.setClearColor(0x000000, 0);
       renderer.clear();
@@ -837,6 +988,23 @@ async function main() {
       controls.target.copy(homeTarget);
       camera.position.copy(homeTarget).add(homeOffset);
       camera.lookAt(homeTarget); camera.updateMatrixWorld();
+      renderer.setClearColor(0x000000, 1);
+      composer.render();
+      return renderer.domElement.toDataURL(type, q);
+    },
+    // capture of a floor for its photo-real plate: the cut-away floor from the fixed plate camera (CONFIG.floorPhoto)
+    floorShot: (fl, size = 2048, pr = 1, type = 'image/png', q = 0.93) => {
+      if (selectedFloor !== fl) selectFloor(fl);
+      anim.active = false;
+      clipPlane.constant = floorBase(fl) + 0.001; clipAnim.t = 1;
+      setHoverFloor(null); setHoverApt(null);
+      const fp = CONFIG.floorPhoto, target = new THREE.Vector3(0, floorBase(fl), 2);
+      renderer.setPixelRatio(pr); composer.setPixelRatio(pr);
+      renderer.setSize(size, size, false); composer.setSize(size, size);
+      camera.aspect = 1; camera.fov = fp.fov; camera.clearViewOffset(); camera.updateProjectionMatrix();
+      controls.target.copy(target);
+      camera.position.copy(target).add(new THREE.Vector3(...fp.cam).setLength(fp.dist));
+      camera.lookAt(target); camera.updateMatrixWorld();
       renderer.setClearColor(0x000000, 1);
       composer.render();
       return renderer.domElement.toDataURL(type, q);

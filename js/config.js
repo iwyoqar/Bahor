@@ -20,6 +20,12 @@ export const CONFIG = {
   // Bosh ko'rinish uchun fotorealistik render (kompyuter). Kamera burchagi o'zgarsa, qayta yaratiladi.
   hero: { desktop: 'assets/hero/hero-desktop.jpg', aspect: 16 / 9 },
 
+  // Bino atrofida 360° aylanish (kompyuter): assets/orbit/ dagi kadrlar ketma-ketligi, 0-kadr = bosh ko'rinish.
+  // frames — kadrlar soni (0000.webp ...), stops — to'xtash nuqtalari (qavat yoritilishi shu burchaklarda aniq tushadi),
+  // stills — to'xtash nuqtalari uchun tiniq suratlar bor-yo'qligi (still-1.jpg ...; 0-nuqta — hero surati).
+  // enabled: false bo'lsa ham ?orbit=1 bilan sinab ko'rish mumkin. Qo'llanma: docs/orbit-360.md
+  orbit: { enabled: true, dir: 'assets/orbit', frames: 160, ext: 'webp', stops: 8, stills: true, degPerPx: 0.22 },
+
   // Narxlar: 1 m² uchun, so'mda. 6 oylik muddatli to'lov.
   // Kalit — boshlang'ich to'lov ulushi (%). 100 = to'liq to'lov.
   // Narxlar ro'yxatida 3, 4, 5-qavatlar yo'q — shu sababli null (so'rov bo'yicha).

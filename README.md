@@ -41,6 +41,10 @@ Sayt GitHub Pages'da: https://iwyoqar.github.io/Bahor/ (`gh-pages` branchidan). 
 
 Asosiy ko'rinishni AI render bilan almashtirish bo'yicha qo'llanma va promptlar: [docs/ai-render.md](docs/ai-render.md). Render uchun xom suratlar `?capture=1&t=750&pr=2` rejimida olinadi (interfeyssiz, qotirilgan kamera burchagidan).
 
+## Bino atrofida 360° aylanish
+
+Bosh ko'rinishda binoni tortib aylantirish (kompyuterda): fotoreal kadrlar ketma-ketligi, ustida 3D'dan olingan qavat yoritilishi. Tayyorlash bo'yicha qo'llanma va promptlar: [docs/orbit-360.md](docs/orbit-360.md). `assets/orbit/` da fotoreal kadrlar (Nano Banana suratlari + Kling kliplari) turadi, aylanish yoqilgan (`CONFIG.orbit.enabled`); o'chirish uchun `?orbit=0`.
+
 ## Narx va aloqa ma'lumotlarini o'zgartirish
 
 Hammasi `js/config.js` faylida:

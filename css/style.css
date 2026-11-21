@@ -24,6 +24,10 @@ a { color: inherit; }
 #hero { position: fixed; inset: 0; overflow: hidden; display: none; transform-origin: 0 0; }
 #hero img { position: absolute; display: block; user-select: none; -webkit-user-drag: none; }
 body.photo #hero { display: block; }
+#hero-orbit { position: absolute; display: block; visibility: hidden; pointer-events: none; }
+#hero-orbit.on { visibility: visible; }
+body.orbit-on.photo #scene canvas { cursor: grab; }
+body.orbit-drag #scene canvas { cursor: grabbing !important; }
 #scene, #scene canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 #scene canvas { transition: opacity .45s ease; }
 #labels { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
@@ -198,6 +202,13 @@ body.apt-mode #labels .apt-tag { display: none; }
 #hint { position: fixed; left: 50%; bottom: calc(var(--gutter) + 6px); transform: translateX(-50%); z-index: 8; display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: 13px; color: #ddd7ca; transition: opacity .4s; white-space: nowrap; }
 #hint .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px var(--gold); }
 body.floor-open #hint { opacity: 0; pointer-events: none; }
+/* 360° turn: arrows above the hint */
+#orbit-ctl { position: fixed; left: 50%; bottom: calc(var(--gutter) + 62px); transform: translateX(-50%); z-index: 8; display: none; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); color: #ddd7ca; font-size: 13px; font-weight: 600; letter-spacing: .04em; transition: opacity .4s; }
+#orbit-ctl span { padding: 0 6px; color: var(--gold); }
+#orbit-ctl button { width: 34px; height: 34px; border: 0; background: none; border-radius: 50%; font-size: 20px; line-height: 1; display: grid; place-items: center; padding: 0 0 3px; }
+#orbit-ctl button:hover { background: rgba(214,181,108,.22); color: #fff; }
+body.orbit-on #orbit-ctl { display: flex; }
+body.floor-open #orbit-ctl, body.capture #orbit-ctl { opacity: 0; pointer-events: none; }
 .cta { position: fixed; right: var(--gutter); bottom: var(--gutter); z-index: 9; display: flex; gap: 10px; align-items: stretch; }
 .cta-parking { display: grid; align-content: center; padding: 0 14px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); line-height: 1.2; }
 .cta-parking small { font-size: 11px; color: var(--muted); }

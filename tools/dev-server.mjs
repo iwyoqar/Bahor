@@ -34,6 +34,19 @@ const server = http.createServer((req, res) => {
     req.on('close', () => clients.delete(res));
     return;
   }
+  // capture: the page saves rendered frames into captures/ (js/orbit-capture.js)
+  if (url.pathname === '/__capture' && req.method === 'POST') {
+    const dir = path.join(ROOT, 'captures');
+    const out = path.join(dir, path.normalize(url.searchParams.get('file') || ''));
+    if (!out.startsWith(dir + path.sep) || !/\.(png|jpe?g|json)$/i.test(out)) { res.writeHead(400); res.end('bad file'); return; }
+    const parts = [];
+    req.on('data', (c) => parts.push(c));
+    req.on('end', () => {
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      fs.writeFile(out, Buffer.concat(parts), (err) => { res.writeHead(err ? 500 : 200); res.end(err ? String(err) : 'ok'); });
+    });
+    return;
+  }
   let rel = decodeURIComponent(url.pathname);
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.join(ROOT, path.normalize(rel));
@@ -85,7 +98,7 @@ function log(code, what) {
 if (LIVE) {
   let timer = null;
   const notify = (f) => {
-    if (!f || /(^|[\\/])(\.git|node_modules|tools)([\\/]|$)/.test(f)) return;
+    if (!f || /(^|[\\/])(\.git|node_modules|tools|captures)([\\/]|$)/.test(f)) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
       log('↻', 'o\'zgardi: ' + f);

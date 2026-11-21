@@ -15,6 +15,7 @@ import { createLighting } from './lighting.js';
 import { createUI } from './ui.js';
 import { t, fmtArea, roomName } from './i18n.js';
 import { dateFromLocal } from './sun.js';
+import { createOrbit } from './orbit.js';
 
 const loaderEl = document.getElementById('loader');
 const loaderBar = document.getElementById('loader-bar');
@@ -37,7 +38,8 @@ async function loadData() {
   return JSON.parse(new TextDecoder().decode(buf));
 }
 
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+// a hidden tab never gets an animation frame: do not hang the loader on it
+const nextFrame = () => new Promise((r) => { const to = setTimeout(r, 150); requestAnimationFrame(() => { clearTimeout(to); r(); }); });
 
 async function main() {
   const data = await loadData();
@@ -217,6 +219,15 @@ async function main() {
     floor: { fixY: true, dir: floorOffset.clone().normalize(), dist: floorOffset.length(), min: isMobile ? 40 : 26, max: floorOffset.length() * 1.1,
       bmin: new THREE.Vector3(-38, 0, -24), bmax: new THREE.Vector3(38, 40, 26) },
   };
+  // 360°: the home camera circles the building around the vertical axis through homeTarget
+  const homeOffset0 = homeOffset.clone();
+  const Y_AXIS = new THREE.Vector3(0, 1, 0);
+  let orbitDeg = 0;
+  function setOrbitAngle(deg) {
+    orbitDeg = ((deg % 360) + 360) % 360;
+    homeOffset.copy(homeOffset0).applyAxisAngle(Y_AXIS, THREE.MathUtils.degToRad(orbitDeg));
+    VIEWS.home.dir.copy(homeOffset).normalize();
+  }
   let view = VIEWS.home;
   let viewHome = homeTarget.clone();
   function useView(v, home) {
@@ -352,6 +363,7 @@ async function main() {
   function selectFloor(fl) {
     if (selectedFloor === fl) return;
     if (aptView) leaveApt(false);
+    finishSpin();
     setPhoto(false);
     if (!selectedFloor) savedView = { pos: camera.position.clone(), target: controls.target.clone() };
     removeInterior();
@@ -424,7 +436,16 @@ async function main() {
   el.addEventListener('pointermove', (e) => {
     lastPointer = { x: e.clientX, y: e.clientY };
     if (e.pointerType === 'touch') return;
-    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 4) { ui.hideTip(); return; }
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 4) {
+      ui.hideTip();
+      if (orbitOn() && e.buttons) {   // drag sideways: turn around the building
+        if (!spin.drag) { spin.drag = true; spin.from = orbitDeg; setHoverFloor(null); document.body.classList.add('orbit-drag'); }
+        spin.anim = null;
+        spinTo(spin.from - (e.clientX - downAt.x) * (ORBIT.degPerPx || 0.22));
+      }
+      return;
+    }
+    if (spin.drag || spin.anim) return;
     const p = pick(e);
     if (selectedFloor) {
       if ((p.apt && p.apt.id) !== (hoveredApt && hoveredApt.id)) setHoverApt(p.apt);
@@ -434,14 +455,19 @@ async function main() {
       if (p.floor) ui.showTip(e.clientX, e.clientY, ui.floorTipHTML(p.floor)); else ui.hideTip();
     }
   });
-  el.addEventListener('pointerleave', () => { if (!selectedFloor) setHoverFloor(null); ui.hideTip(); });
-  el.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  el.addEventListener('pointerleave', () => { if (spin.drag) return; if (!selectedFloor) setHoverFloor(null); ui.hideTip(); });
+  el.addEventListener('pointerdown', (e) => {
+    downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (orbitOn()) { try { el.setPointerCapture(e.pointerId); } catch (_) { /* older browsers */ } }
+  });
+  el.addEventListener('pointercancel', () => { downAt = null; endSpin(); });
   el.addEventListener('pointerup', (e) => {
+    if (spin.drag) { downAt = null; endSpin(); return; }
     if (!downAt) return;
     const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
     const quick = performance.now() - downAt.t < 600;
     downAt = null;
-    if (moved > 6 || !quick) return;
+    if (moved > 6 || !quick || spin.anim) return;
     const p = pick(e);
     if (selectedFloor) {
       if (p.apt) ui.selectApt(p.apt);
@@ -488,6 +514,64 @@ async function main() {
     applyViewOffset();
   }
 
+  // ------------------------------------------------ 360° photo-real turn (frames in CONFIG.orbit.dir)
+  const ORBIT = CONFIG.orbit || {};
+  const orbit = createOrbit(document.getElementById('hero-orbit'), ORBIT);
+  const orbitWanted = !capture && !isMobile && ORBIT.frames > 0 && (ORBIT.enabled ? params.get('orbit') !== '0' : params.has('orbit'));
+  const orbitOn = () => orbitWanted && orbit.ready && photo.active && !selectedFloor;
+  const STOPS = ORBIT.stops || 0;                 // 0: stop anywhere; n: settle on n evenly spaced views
+  const spin = { drag: false, from: 0, anim: null, deg: 0 };
+  const atStop = () => !spin.drag && !spin.anim;   // the floor light is drawn only on a settled view
+  function spinTo(deg) {
+    spin.deg = deg;
+    setOrbitAngle(deg);
+    orbit.show(orbitDeg, false);
+  }
+  function settle() { document.body.classList.remove('orbit-drag'); orbit.show(orbitDeg, true); }
+  function endSpin() {
+    if (!spin.drag) return;
+    spin.drag = false;
+    if (!STOPS) { settle(); return; }
+    const step = 360 / STOPS;
+    spinAnimate(Math.round(spin.deg / step) * step);
+  }
+  function spinAnimate(to) {
+    const d = Math.abs(to - spin.deg);
+    if (d < 0.01) { spin.anim = null; settle(); return; }
+    spin.anim = { a: spin.deg, b: to, t: 0, dur: Math.min(1.1, 0.25 + d / 70) };
+    setHoverFloor(null); ui.hideTip();
+  }
+  function stepSpin(dt) {
+    const s = spin.anim;
+    if (!s) return;
+    s.t = Math.min(1, s.t + dt / s.dur);
+    spinTo(s.a + (s.b - s.a) * ease(s.t));
+    if (s.t >= 1) { spin.anim = null; spin.deg = orbitDeg; settle(); }
+  }
+  /** jump to where the turn was heading (a floor was opened in the middle of it) */
+  function finishSpin() {
+    if (!spin.drag && !spin.anim) return;
+    const step = STOPS ? 360 / STOPS : 0;
+    const to = spin.anim ? spin.anim.b : step ? Math.round(spin.deg / step) * step : spin.deg;
+    spin.drag = false; spin.anim = null;
+    spinTo(to); spin.deg = orbitDeg; settle();
+  }
+  /** turn by one view (arrow buttons and keys) */
+  function spinStep(dir) {
+    if (!orbitOn() || spin.drag) return;
+    const step = 360 / (STOPS || 8);
+    const base = spin.anim ? spin.anim.b : spin.deg;
+    spin.deg = spin.anim ? spin.deg : orbitDeg;
+    spinAnimate((STOPS ? Math.round(base / step) * step : base) + dir * step);
+  }
+  document.getElementById('orbit-prev').addEventListener('click', () => spinStep(-1));
+  document.getElementById('orbit-next').addEventListener('click', () => spinStep(1));
+  addEventListener('keydown', (e) => {
+    if (e.target.closest && e.target.closest('input, textarea, .modal.open')) return;
+    if (e.key === 'ArrowLeft') spinStep(-1);
+    if (e.key === 'ArrowRight') spinStep(1);
+  });
+
   // ------------------------------------------------ photo-real hero (desktop home view)
   const heroEl = document.getElementById('hero');
   const heroImg = document.getElementById('hero-photo');
@@ -505,7 +589,9 @@ async function main() {
     const W = innerWidth, H = innerHeight;
     let pw, ph;
     if (W / H <= HERO_ASPECT) { ph = H; pw = H * HERO_ASPECT; } else { pw = W; ph = W / HERO_ASPECT; }
-    Object.assign(heroImg.style, { width: pw + 'px', height: ph + 'px', left: (W - pw) / 2 + 'px', top: (H - ph) / 2 + 'px' });
+    const box = { width: pw + 'px', height: ph + 'px', left: (W - pw) / 2 + 'px', top: (H - ph) / 2 + 'px' };
+    Object.assign(heroImg.style, box);
+    Object.assign(orbit.canvas.style, box);
     heroEl.style.transform = `scale(${photo.z}) translate(${-photo.x0}px, ${-photo.y0}px)`;
   }
   function resetPhotoZoom() { photo.z = 1; photo.x0 = 0; photo.y0 = 0; layoutPhoto(); }
@@ -583,6 +669,7 @@ async function main() {
   setTimeout(() => loaderEl.remove(), 900);
   if (capture || photo.enabled) camera.position.copy(startPos); else flyTo(startPos, startTarget, 3.2);
   if (photo.enabled) { layoutPhoto(); setPhoto(true, false); document.body.classList.add('photo-intro'); }
+  if (orbitWanted && photo.enabled) orbit.load().then((ok) => { if (ok) { document.body.classList.add('orbit-on'); document.getElementById('hint-text').textContent = t('hint360'); } });
 
   // ?capture=1&apt=6-21            -> dollhouse model of the apartment, full frame, no UI
   // ?capture=1&apt=6-21&room=living -> eye-level photo of a room (room=living|kitchen|bedroom|bath|wc|hall, i=index)
@@ -645,6 +732,7 @@ async function main() {
     stepAnim(dt);
     stepClip(dt);
     stepViewShift(dt);
+    stepSpin(dt);
     controls.update();
     enforceView(dt);
     interiorLight.intensity = selectedFloor && !aptView ? 0.3 + 1.2 * envNight : 0;
@@ -655,7 +743,7 @@ async function main() {
       renderer.setRenderTarget(null);
       renderer.setClearColor(0x000000, 0);
       renderer.clear();
-      renderer.render(overlayScene, camera);
+      if (atStop()) renderer.render(overlayScene, camera);
     } else {
       renderer.setClearColor(0x000000, 1);
       composer.render();
@@ -675,8 +763,32 @@ async function main() {
     hovered: () => hoveredFloor,
     fps: () => renderer.info.render.frame,
     view: (x, y, z, tx, ty, tz) => { anim.active = false; camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update(); },
+    orbit: () => ({ deg: orbitDeg, on: orbitOn(), settled: atStop() }),
+    spinStep,
+    // capture (js/orbit-capture.js): fixed frame size, and one frame of the turn as a data URL
+    captureSize: (w, h, pr) => {
+      renderer.setPixelRatio(pr); composer.setPixelRatio(pr);
+      renderer.setSize(w, h, false); composer.setSize(w, h);
+      camera.aspect = w / h; camera.fov = BASE_FOV; camera.clearViewOffset(); camera.updateProjectionMatrix();
+    },
+    orbitShot: (deg, type = 'image/jpeg', q = 0.93) => {
+      anim.active = false;
+      setOrbitAngle(deg);
+      controls.target.copy(homeTarget);
+      camera.position.copy(homeTarget).add(homeOffset);
+      camera.lookAt(homeTarget); camera.updateMatrixWorld();
+      renderer.setClearColor(0x000000, 1);
+      composer.render();
+      return renderer.domElement.toDataURL(type, q);
+    },
     ready: true,
   };
+  // ?capture=1&orbit=90  -> clean frame from that angle; ?capture=1&orbit=rec -> save the whole turn
+  if (capture && params.has('orbit')) {
+    const o = params.get('orbit');
+    if (o === 'rec') import('./orbit-capture.js').then((m) => m.record(window.__bahor, CONFIG.orbit || {}, params));
+    else { setOrbitAngle(+o || 0); camera.position.copy(homeTarget).add(homeOffset); }
+  }
 }
 
 main().catch((err) => {

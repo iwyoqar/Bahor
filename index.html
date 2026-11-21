@@ -21,7 +21,7 @@
   </script>
 </head>
 <body>
-  <div id="hero"><img id="hero-photo" alt="Bahor turar-joy majmuasi" decoding="async"></div>
+  <div id="hero"><img id="hero-photo" alt="Bahor turar-joy majmuasi" decoding="async"><canvas id="hero-orbit"></canvas></div>
   <div id="scene"></div>
   <div id="labels"></div>
 
@@ -72,6 +72,11 @@
   <div id="tooltip" role="tooltip"></div>
 
   <div id="hint"><span class="dot"></span><span id="hint-text"></span></div>
+  <div id="orbit-ctl">
+    <button id="orbit-prev" aria-label="chapga aylantirish">‹</button>
+    <span>360°</span>
+    <button id="orbit-next" aria-label="o'ngga aylantirish">›</button>
+  </div>
 
   <div class="cta">
     <div class="cta-parking"><small data-t="parkingPrice"></small><b id="parking-price"></b></div>

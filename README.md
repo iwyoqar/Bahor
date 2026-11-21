@@ -43,7 +43,7 @@ Asosiy ko'rinishni AI render bilan almashtirish bo'yicha qo'llanma va promptlar:
 
 ## Bino atrofida 360° aylanish
 
-Bosh ko'rinishda binoni tortib aylantirish (kompyuterda): fotoreal kadrlar ketma-ketligi, ustida 3D'dan olingan qavat yoritilishi. Tayyorlash bo'yicha qo'llanma va promptlar: [docs/orbit-360.md](docs/orbit-360.md). `assets/orbit/` da fotoreal kadrlar (Nano Banana suratlari + Kling kliplari) turadi, aylanish yoqilgan (`CONFIG.orbit.enabled`); o'chirish uchun `?orbit=0`.
+Bosh ko'rinishda binoni tortib aylantirish (kompyuter va telefon): fotoreal kadrlar ketma-ketligi, ustida 3D'dan olingan qavat yoritilishi. Tayyorlash bo'yicha qo'llanma va promptlar: [docs/orbit-360.md](docs/orbit-360.md). `assets/orbit/` da fotoreal kadrlar (Nano Banana suratlari + Kling kliplari) turadi, aylanish yoqilgan (`CONFIG.orbit.enabled`); o'chirish uchun `?orbit=0`.
 
 ## Narx va aloqa ma'lumotlarini o'zgartirish
 

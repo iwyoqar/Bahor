@@ -70,15 +70,17 @@ async function main() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(isMobile ? 50 : 38, innerWidth / innerHeight, 0.5, 9000);
 
-  // fixed viewing angle: no orbiting or panning, only zoom (towards the cursor) within limits
+  // fixed viewing angle: no orbiting; drag slides the view over the ground, zoom goes towards the cursor (within limits)
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.enableRotate = false;
-  controls.enablePan = false;
+  controls.enablePan = true;
+  controls.screenSpacePanning = false;   // up/down drag moves along the ground, the height stays
   controls.zoomToCursor = true;
   controls.zoomSpeed = 0.9;
-  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+  controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
 
   // ------------------------------------------------ scene content
   const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e4);
@@ -243,8 +245,10 @@ async function main() {
     if (view.fixY) t.y = viewHome.y;
     let d = camera.position.distanceTo(t);
     d = Math.min(Math.max(d, view.min), view.max);
-    // when zoomed out, drift back to the default framing
-    const k = Math.min(1, Math.max(0, (d - (view.min + 0.7 * (view.max - view.min))) / (0.3 * (view.max - view.min))));
+    // only when zoomed out past the default distance drift back to the default framing
+    // (at the normal distance a slid view stays where it was put)
+    const from = view.dist || view.min + 0.7 * (view.max - view.min);
+    const k = view.max > from ? Math.min(1, Math.max(0, (d - from) / (view.max - from))) : 0;
     if (k > 0) t.lerp(viewHome, Math.min(1, k * dt * 4));
     camera.position.copy(tmpV.copy(view.dir).multiplyScalar(d).add(t));
   }
@@ -382,6 +386,17 @@ async function main() {
     document.body.classList.add('cutaway');
   }
 
+  /** slide the floor (or apartment) view by one step: dx — right, dy — away from the viewer (arrow keys) */
+  function panStep(dx, dy) {
+    if (!selectedFloor || anim.active) return;
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize();
+    const ahead = new THREE.Vector3().crossVectors(Y_AXIS, right).normalize();   // into the screen, along the ground
+    const step = Math.max(4, camera.position.distanceTo(controls.target) * 0.16);
+    const t1 = controls.target.clone().addScaledVector(right, dx * step).addScaledVector(ahead, dy * step).clamp(view.bmin, view.bmax);
+    if (view.fixY) t1.y = viewHome.y;
+    flyTo(camera.position.clone().add(t1).sub(controls.target), t1, 0.35);
+  }
+
   function back() {
     if (!selectedFloor) return;
     if (aptView) leaveApt(false);
@@ -435,17 +450,20 @@ async function main() {
   const el = renderer.domElement;
   el.addEventListener('pointermove', (e) => {
     lastPointer = { x: e.clientX, y: e.clientY };
-    if (e.pointerType === 'touch') return;
-    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 4) {
+    const touch = e.pointerType === 'touch';
+    if (touch && !orbitOn()) return;
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > (touch ? 8 : 4)) {
       ui.hideTip();
-      if (orbitOn() && e.buttons) {   // drag sideways: turn around the building
+      if (orbitOn() && (e.buttons || touch)) {   // drag sideways: turn around the building
         if (!spin.drag) { spin.drag = true; spin.from = orbitDeg; setHoverFloor(null); document.body.classList.add('orbit-drag'); }
         spin.anim = null;
-        spinTo(spin.from - (e.clientX - downAt.x) * (ORBIT.degPerPx || 0.22));
+        // a narrow screen turns faster, so one swipe across a phone still covers a good part of the circle
+        const perPx = (ORBIT.degPerPx || 0.22) * Math.min(2, Math.max(1, 900 / innerWidth));
+        spinTo(spin.from - (e.clientX - downAt.x) * perPx);
       }
       return;
     }
-    if (spin.drag || spin.anim) return;
+    if (touch || spin.drag || spin.anim) return;
     const p = pick(e);
     if (selectedFloor) {
       if ((p.apt && p.apt.id) !== (hoveredApt && hoveredApt.id)) setHoverApt(p.apt);
@@ -458,7 +476,7 @@ async function main() {
   el.addEventListener('pointerleave', () => { if (spin.drag) return; if (!selectedFloor) setHoverFloor(null); ui.hideTip(); });
   el.addEventListener('pointerdown', (e) => {
     downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
-    if (orbitOn()) { try { el.setPointerCapture(e.pointerId); } catch (_) { /* older browsers */ } }
+    if (orbitOn()) { orbit.more(); try { el.setPointerCapture(e.pointerId); } catch (_) { /* older browsers */ } }
   });
   el.addEventListener('pointercancel', () => { downAt = null; endSpin(); });
   el.addEventListener('pointerup', (e) => {
@@ -496,7 +514,7 @@ async function main() {
   function applyViewOffset() {
     const w = innerWidth, h = innerHeight;
     if (photo.active) {
-      if (photo.z > 1.0001) camera.setViewOffset(w, h, photo.x0, photo.y0, w / photo.z, h / photo.z);
+      if (photo.z > 1.0001 || photo.sy) camera.setViewOffset(w, h, photo.x0, photo.y0 + photo.sy, w / photo.z, h / photo.z);
       else camera.clearViewOffset();
       return;
     }
@@ -516,8 +534,8 @@ async function main() {
 
   // ------------------------------------------------ 360° photo-real turn (frames in CONFIG.orbit.dir)
   const ORBIT = CONFIG.orbit || {};
-  const orbit = createOrbit(document.getElementById('hero-orbit'), ORBIT);
-  const orbitWanted = !capture && !isMobile && ORBIT.frames > 0 && (ORBIT.enabled ? params.get('orbit') !== '0' : params.has('orbit'));
+  const orbit = createOrbit(document.getElementById('hero-orbit'), ORBIT, { onFrame: (im) => paintHeroBg(im) });
+  const orbitWanted = !capture && ORBIT.frames > 0 && (ORBIT.enabled ? params.get('orbit') !== '0' : params.has('orbit'));
   const orbitOn = () => orbitWanted && orbit.ready && photo.active && !selectedFloor;
   const STOPS = ORBIT.stops || 0;                 // 0: stop anywhere; n: settle on n evenly spaced views
   const spin = { drag: false, from: 0, anim: null, deg: 0 };
@@ -564,35 +582,62 @@ async function main() {
     spin.deg = spin.anim ? spin.deg : orbitDeg;
     spinAnimate((STOPS ? Math.round(base / step) * step : base) + dir * step);
   }
-  document.getElementById('orbit-prev').addEventListener('click', () => spinStep(-1));
-  document.getElementById('orbit-next').addEventListener('click', () => spinStep(1));
+  document.getElementById('orbit-prev').addEventListener('click', () => { orbit.more(); spinStep(-1); });
+  document.getElementById('orbit-next').addEventListener('click', () => { orbit.more(); spinStep(1); });
   addEventListener('keydown', (e) => {
-    if (e.target.closest && e.target.closest('input, textarea, .modal.open')) return;
-    if (e.key === 'ArrowLeft') spinStep(-1);
-    if (e.key === 'ArrowRight') spinStep(1);
+    if (e.target.closest && e.target.closest('input, textarea')) return;
+    if (document.querySelector('.modal.open')) return;
+    const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+    if (!dir) return;
+    if (selectedFloor) { e.preventDefault(); panStep(dir[0], dir[1]); return; }
+    if (dir[0]) { orbit.more(); spinStep(dir[0]); }
   });
-
   // ------------------------------------------------ photo-real hero (desktop home view)
   const heroEl = document.getElementById('hero');
   const heroImg = document.getElementById('hero-photo');
   const HERO_ASPECT = CONFIG.hero.aspect;
   const BASE_FOV = camera.fov;
-  const photo = { loaded: false, enabled: false, active: false, z: 1, x0: 0, y0: 0 };
-  const photoAllowed = () => photo.loaded && !isMobile && !capture && innerWidth > 760;
+  const PHOTO_FOV = 38;              // the camera the hero photo and the 360° frames were made with
+  const PHOTO_HOME = new THREE.Vector3(64, 37, 94);
+  // tall screens (phones): the photo spans FIT_K screen widths (the building fits), blurred copy above and below
+  const PORTRAIT = 1.2, FIT_K = 1.45, FIT_LIFT = 0.04;
+  const photo = { loaded: false, enabled: false, active: false, z: 1, x0: 0, y0: 0, sy: 0 };
+  const photoAllowed = () => photo.loaded && !capture;
+  const tallScreen = () => innerWidth / innerHeight < PORTRAIT;
+  /** vertical field of view that lines the 3D overlay up with the photo box of layoutPhoto() */
+  function photoFov() {
+    const A = innerWidth / innerHeight;
+    const t = Math.tan(THREE.MathUtils.degToRad(PHOTO_FOV / 2));
+    const tv = A < PORTRAIT ? (t * HERO_ASPECT) / FIT_K / A : A <= HERO_ASPECT ? t : (t * HERO_ASPECT) / A;
+    return 2 * THREE.MathUtils.radToDeg(Math.atan(tv));
+  }
   function frameFov() {
+    if (photo.active) return photoFov();
     // on screens wider than the photo keep the photo's horizontal field of view
     const A = innerWidth / innerHeight;
     if (isMobile || A <= HERO_ASPECT) return BASE_FOV;
     return 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(BASE_FOV / 2)) * HERO_ASPECT / A));
   }
+  function updateFov() { camera.fov = frameFov(); camera.updateProjectionMatrix(); }
   function layoutPhoto() {
     const W = innerWidth, H = innerHeight;
+    const tall = tallScreen();
     let pw, ph;
-    if (W / H <= HERO_ASPECT) { ph = H; pw = H * HERO_ASPECT; } else { pw = W; ph = W / HERO_ASPECT; }
-    const box = { width: pw + 'px', height: ph + 'px', left: (W - pw) / 2 + 'px', top: (H - ph) / 2 + 'px' };
+    if (tall) { pw = W * FIT_K; ph = pw / HERO_ASPECT; } else if (W / H <= HERO_ASPECT) { ph = H; pw = H * HERO_ASPECT; } else { pw = W; ph = W / HERO_ASPECT; }
+    photo.sy = tall ? Math.round(H * FIT_LIFT) : 0;   // a little above the middle: the floor buttons sit at the bottom
+    const box = { width: pw + 'px', height: ph + 'px', left: (W - pw) / 2 + 'px', top: (H - ph) / 2 - photo.sy + 'px' };
     Object.assign(heroImg.style, box);
     Object.assign(orbit.canvas.style, box);
+    document.body.classList.toggle('photo-fit', tall);
     heroEl.style.transform = `scale(${photo.z}) translate(${-photo.x0}px, ${-photo.y0}px)`;
+  }
+  // blurred copy of the current frame behind the photo (fills the screen above and below it on phones)
+  const heroBg = document.getElementById('hero-bg');
+  const heroBgCtx = heroBg.getContext('2d');
+  function paintHeroBg(im) {
+    const src = im || heroImg;
+    if (!src.naturalWidth) return;
+    heroBgCtx.drawImage(src, 0, 0, heroBg.width, heroBg.height);
   }
   function resetPhotoZoom() { photo.z = 1; photo.x0 = 0; photo.y0 = 0; layoutPhoto(); }
   function photoZoom(cx, cy, factor) {
@@ -612,13 +657,14 @@ async function main() {
       resetPhotoZoom();
       document.body.classList.add('photo');
       controls.enabled = false;
-      const go = () => { photo.active = true; applyViewOffset(); canvas.style.transition = 'none'; canvas.style.opacity = '1'; requestAnimationFrame(() => { canvas.style.transition = ''; }); };
+      const go = () => { photo.active = true; updateFov(); applyViewOffset(); canvas.style.transition = 'none'; canvas.style.opacity = '1'; requestAnimationFrame(() => { canvas.style.transition = ''; }); };
       if (fade) { canvas.style.opacity = '0'; setTimeout(go, 460); } else go();
     } else {
       if (!photo.active && !document.body.classList.contains('photo')) return;
       photo.active = false;
       resetPhotoZoom();
       controls.enabled = true;
+      updateFov();
       applyViewOffset();
       canvas.style.transition = 'none'; canvas.style.opacity = '0';
       requestAnimationFrame(() => { canvas.style.transition = ''; canvas.style.opacity = '1'; });
@@ -649,16 +695,22 @@ async function main() {
   addEventListener('sheetchange', () => setShiftTarget());
 
   // ------------------------------------------------ start
+  if (CONFIG.hero.desktop && !capture && (!isMobile || CONFIG.hero.mobile !== false)) {
+    heroImg.src = CONFIG.hero.desktop;
+    try { await heroImg.decode(); photo.loaded = true; } catch (e) { console.warn('hero image', e); }
+  }
+  if (photo.loaded && isMobile) {
+    // phones: the home view is the photo, so the home camera is the one the photo was taken from
+    homeOffset0.copy(PHOTO_HOME); setOrbitAngle(0);
+    VIEWS.home.dist = PHOTO_HOME.length(); VIEWS.home.min = 52; VIEWS.home.max = PHOTO_HOME.length() * 1.08;
+  }
+  if (photo.loaded) paintHeroBg(null);
   const startTarget = homeTarget.clone();
   const startPos = homeTarget.clone().add(homeOffset);
   useView(VIEWS.home, homeTarget);
   camera.position.copy(homeTarget.clone().add(homeOffset.clone().multiplyScalar(2.6)));
   controls.target.copy(startTarget);
   applyTime(true);
-  if (CONFIG.hero.desktop && !isMobile && !capture) {
-    heroImg.src = CONFIG.hero.desktop;
-    try { await heroImg.decode(); photo.loaded = true; } catch (e) { console.warn('hero image', e); }
-  }
   camera.fov = frameFov(); camera.updateProjectionMatrix();
   photo.enabled = photoAllowed();
   setProgress(1);
@@ -669,7 +721,15 @@ async function main() {
   setTimeout(() => loaderEl.remove(), 900);
   if (capture || photo.enabled) camera.position.copy(startPos); else flyTo(startPos, startTarget, 3.2);
   if (photo.enabled) { layoutPhoto(); setPhoto(true, false); document.body.classList.add('photo-intro'); }
-  if (orbitWanted && photo.enabled) orbit.load().then((ok) => { if (ok) { document.body.classList.add('orbit-on'); document.getElementById('hint-text').textContent = t('hint360'); } });
+  if (orbitWanted && photo.enabled) {
+    orbit.load().then((ok) => {
+      if (!ok) return;
+      document.body.classList.add('orbit-on');
+      document.getElementById('hint-text').textContent = t(matchMedia('(hover: none)').matches ? 'hint360Touch' : 'hint360');
+      // the frames in between: on the first turn, or a little later on a computer (phones save the data)
+      if (!isMobile) setTimeout(() => orbit.more(), 6000);
+    });
+  }
 
   // ?capture=1&apt=6-21            -> dollhouse model of the apartment, full frame, no UI
   // ?capture=1&apt=6-21&room=living -> eye-level photo of a room (room=living|kitchen|bedroom|bath|wc|hall, i=index)

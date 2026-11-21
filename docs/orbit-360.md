@@ -109,8 +109,9 @@ orbit: { enabled: true, …, stills: true, … }
 
 ## Saytda qanday ishlaydi
 
-- Faqat kompyuterda, bosh ko'rinishda. Telefonda bosh ko'rinish hozirgidek 3D bo'lib qoladi.
-- Tortish — aylantirish; qo'yib yuborilganda eng yaqin to'xtash nuqtasiga (har 45°) o'tadi. Pastdagi ‹ 360° › tugmalari va klaviaturadagi ← → ham bitta nuqtaga suradi.
+- Bosh ko'rinishda, kompyuterda ham, telefonda ham. Tik ekranda (telefon) foto ekran kengligiga moslanadi, ustida va ostida shu kadrning xira nusxasi turadi.
+- Tortish (telefonda barmoq bilan surish) — aylantirish; qo'yib yuborilganda eng yaqin to'xtash nuqtasiga (har 45°) o'tadi. Pastdagi ‹ 360° › tugmalari va klaviaturadagi ← → ham bitta nuqtaga suradi.
+- Sahifa ochilganda faqat har 22.5° dagi 16 ta kadr yuklanadi (~1 MB). Qolganlari birinchi aylantirishda yuklanadi (kompyuterda 6 soniyadan keyin o'zi ham).
 - Qavat yoritilishi va bosish faqat to'xtash nuqtalarida ishlaydi: u yerda kadr 3D bilan aniq ustma-ust tushadi. Aylanish paytida AI klip 3D yo'ldan biroz og'ishi mumkin.
 - Qavat tanlansa, kamera shu tomondan 3D'ga o'tadi; orqaga qaytganda yana shu burchakdagi surat chiqadi.
 - `orbit.stops: 0` — istalgan burchakda to'xtash (faqat kliplar 3D yo'lni aniq takrorlasa).

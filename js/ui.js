@@ -33,7 +33,8 @@ export function createUI(data, cb) {
     $('#cta-call').href = CONFIG.phoneHref;
     $('#parking-price').textContent = `${fmtMoney(CONFIG.parkingPrice)} ${t('sum')}`;
     const touch = matchMedia('(hover: none)').matches;
-    $('#hint-text').textContent = touch ? t('hintTouch') : document.body.classList.contains('orbit-on') ? t('hint360') : t('hint');
+    const turn = document.body.classList.contains('orbit-on');
+    $('#hint-text').textContent = t(touch ? (turn ? 'hint360Touch' : 'hintTouch') : turn ? 'hint360' : 'hint');
     buildRail();
     if (state.floor) renderFloor(state.floor, false);
     if (planModal.classList.contains('open') && state.floor) viewer.show(byFloor.get(state.floor));

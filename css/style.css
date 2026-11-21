@@ -24,6 +24,8 @@ a { color: inherit; }
 #hero { position: fixed; inset: 0; overflow: hidden; display: none; transform-origin: 0 0; }
 #hero img { position: absolute; display: block; user-select: none; -webkit-user-drag: none; }
 body.photo #hero { display: block; }
+#hero-bg { position: absolute; left: -10%; top: -10%; width: 120%; height: 120%; display: none; object-fit: cover; filter: blur(26px) brightness(.5) saturate(1.15); pointer-events: none; }
+body.photo-fit #hero-bg { display: block; }
 #hero-orbit { position: absolute; display: block; visibility: hidden; pointer-events: none; }
 #hero-orbit.on { visibility: visible; }
 body.orbit-on.photo #scene canvas { cursor: grab; }
@@ -209,6 +211,9 @@ body.floor-open #hint { opacity: 0; pointer-events: none; }
 #orbit-ctl button:hover { background: rgba(214,181,108,.22); color: #fff; }
 body.orbit-on #orbit-ctl { display: flex; }
 body.floor-open #orbit-ctl, body.capture #orbit-ctl { opacity: 0; pointer-events: none; }
+/* floor view: drag slides the view (flats hidden under the side panels come out) */
+body.floor-open #scene canvas { cursor: grab; }
+body.floor-open #scene canvas:active { cursor: grabbing; }
 .cta { position: fixed; right: var(--gutter); bottom: var(--gutter); z-index: 9; display: flex; gap: 10px; align-items: stretch; }
 .cta-parking { display: grid; align-content: center; padding: 0 14px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); line-height: 1.2; }
 .cta-parking small { font-size: 11px; color: var(--muted); }
@@ -336,7 +341,7 @@ body.floor-open .cta-parking { display: none; }
   .dt-title { font-size: 24px; }
   body.floor-open #floor-rail { bottom: calc(152px + 8px); }
   body.floor-open.sheet-expanded #floor-rail { opacity: 0; pointer-events: none; }
-  body.floor-open .cta { display: none; }
+  #orbit-ctl { bottom: calc(68px + 62px); }  body.floor-open .cta { display: none; }
   .fp-title { font-size: 24px; }
   .fp-sub { font-size: 12px; }
   .dt-area b { font-size: 46px; }

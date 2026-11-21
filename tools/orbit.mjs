@@ -63,7 +63,7 @@ function refs() {
 function writeFrames(files, start) {
   fs.mkdirSync(OUT, { recursive: true });
   const list = listFile(files);
-  ffmpeg(['-f', 'concat', '-safe', '0', '-r', String(FPS), '-i', list, '-fps_mode', 'cfr', '-r', String(FPS), '-frames:v', String(files.length), '-vf', 'scale=1280:720:flags=lanczos,setsar=1', '-c:v', 'libwebp', '-q:v', '80', '-start_number', String(start), path.join(OUT, '%04d.webp')]);
+  ffmpeg(['-f', 'concat', '-safe', '0', '-r', String(FPS), '-i', list, '-fps_mode', 'cfr', '-r', String(FPS), '-frames:v', String(files.length), '-vf', 'scale=1280:720:flags=lanczos,setsar=1', '-c:v', 'libwebp', '-q:v', '68', '-compression_level', '6', '-preset', 'photo', '-start_number', String(start), path.join(OUT, '%04d.webp')]);
   fs.unlinkSync(list);
 }
 
@@ -96,7 +96,7 @@ function frames() {
   for (let k = 1; k < seg; k++) {
     const photo = ['jpg', 'jpeg', 'png', 'webp'].map((e) => path.join(CAP, 'photos', `photo-${k}.${e}`)).find((p) => fs.existsSync(p));
     if (!photo) continue;
-    ffmpeg(['-i', photo, '-vf', 'scale=2560:1440:flags=lanczos,setsar=1', '-q:v', '3', '-frames:v', '1', '-update', '1', path.join(OUT, `still-${k}.jpg`)]);
+    ffmpeg(['-i', photo, '-vf', 'scale=2560:1440:flags=lanczos,setsar=1', '-q:v', '5', '-frames:v', '1', '-update', '1', path.join(OUT, `still-${k}.jpg`)]);
     stills++;
   }
   console.log(`\n${done} / ${seg} bo'lak fotoreal. Tiniq suratlar: ${stills} / ${seg - 1}.`);

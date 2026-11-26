@@ -17,7 +17,6 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
   '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.md': 'text/markdown; charset=utf-8',
-  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
 };
 
 const RELOAD_SNIPPET = `<script>(() => { const es = new EventSource('/__reload');
@@ -34,27 +33,12 @@ const server = http.createServer((req, res) => {
     req.on('close', () => clients.delete(res));
     return;
   }
-  // capture: the page saves rendered frames into captures/ (js/orbit-capture.js)
-  if (url.pathname === '/__capture' && req.method === 'POST') {
-    const dir = path.join(ROOT, 'captures');
-    const out = path.join(dir, path.normalize(url.searchParams.get('file') || ''));
-    if (!out.startsWith(dir + path.sep) || !/\.(png|jpe?g|json)$/i.test(out)) { res.writeHead(400); res.end('bad file'); return; }
-    const parts = [];
-    req.on('data', (c) => parts.push(c));
-    req.on('end', () => {
-      fs.mkdirSync(path.dirname(out), { recursive: true });
-      fs.writeFile(out, Buffer.concat(parts), (err) => { res.writeHead(err ? 500 : 200); res.end(err ? String(err) : 'ok'); });
-    });
-    return;
-  }
   let rel = decodeURIComponent(url.pathname);
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.join(ROOT, path.normalize(rel));
   if (!file.startsWith(ROOT + path.sep) || file.includes(`${path.sep}.git${path.sep}`)) {
     res.writeHead(403); res.end('Forbidden'); return;
   }
-  const type0 = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
-  if (type0.startsWith('video/')) { serveRange(req, res, file, type0); return; }
   fs.readFile(file, (err, buf) => {
     if (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -70,25 +54,6 @@ const server = http.createServer((req, res) => {
   });
 });
 
-// videos: byte ranges (Safari / iOS will not play video without them)
-function serveRange(req, res, file, type) {
-  fs.stat(file, (err, st) => {
-    if (err) { res.writeHead(404); res.end(); log(404, req.url); return; }
-    const size = st.size;
-    const m = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
-    if (!m) {
-      res.writeHead(200, { 'Content-Type': type, 'Content-Length': size, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' });
-      fs.createReadStream(file).pipe(res);
-      return;
-    }
-    let start = m[1] === '' ? size - +m[2] : +m[1];
-    let end = m[1] === '' || m[2] === '' ? size - 1 : Math.min(+m[2], size - 1);
-    if (start > end || start >= size) { res.writeHead(416, { 'Content-Range': `bytes */${size}` }); res.end(); return; }
-    res.writeHead(206, { 'Content-Type': type, 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' });
-    fs.createReadStream(file, { start, end }).pipe(res);
-  });
-}
-
 function log(code, what) {
   const t = new Date().toTimeString().slice(0, 8);
   console.log(`${t}  ${code}  ${what}`);
@@ -98,7 +63,7 @@ function log(code, what) {
 if (LIVE) {
   let timer = null;
   const notify = (f) => {
-    if (!f || /(^|[\\/])(\.git|node_modules|tools|captures)([\\/]|$)/.test(f)) return;
+    if (!f || /(^|[\\/])(\.git|node_modules|tools)([\\/]|$)/.test(f)) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
       log('↻', 'o\'zgardi: ' + f);

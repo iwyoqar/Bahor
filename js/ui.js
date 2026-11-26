@@ -3,7 +3,7 @@ import { CONFIG } from './config.js';
 import { t, setLang, getLang, onLang, fmtMoney, fmtMln, fmtArea, roomName } from './i18n.js';
 import { floorPrices, minPerM2, aptPrice, aptMinPrice } from './pricing.js';
 import { PlanViewer } from './plan2d.js';
-import { createTours, createTourPlayer } from './tour.js';
+import { fmtClock } from './sun.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -18,8 +18,6 @@ export function createUI(data, cb) {
   const panel = $('#floor-panel');
   const tooltip = $('#tooltip');
   const planModal = $('#plan-modal');
-  const tourFor = createTours(data);
-  const player = createTourPlayer();
   const viewer = new PlanViewer($('#plan-host'), {
     onHover: (a) => { cb.onHoverApt(a); viewer.highlight(a ? a.id : null); showAptTip(a); },
     onSelect: (a) => { selectApt(a); },
@@ -33,8 +31,7 @@ export function createUI(data, cb) {
     $('#cta-call').href = CONFIG.phoneHref;
     $('#parking-price').textContent = `${fmtMoney(CONFIG.parkingPrice)} ${t('sum')}`;
     const touch = matchMedia('(hover: none)').matches;
-    const turn = document.body.classList.contains('orbit-on');
-    $('#hint-text').textContent = t(touch ? (turn ? 'hint360Touch' : 'hintTouch') : turn ? 'hint360' : 'hint');
+    $('#hint-text').textContent = touch ? t('hintTouch') : t('hint');
     buildRail();
     if (state.floor) renderFloor(state.floor, false);
     if (planModal.classList.contains('open') && state.floor) viewer.show(byFloor.get(state.floor));
@@ -242,8 +239,7 @@ export function createUI(data, cb) {
         <div><div class="dt-title">${a.commercial ? t('commercial') : `${t('apt')} ${t('aptNo', { n: aptNo(a) })}`}</div>
         <div class="dt-sub">${t('floor', { n: fl })}${a.commercial ? '' : ' · ' + t('roomsN', { n: a.rooms })}</div></div>
       </div>
-      <div class="dt-mini"><div><b>${fmtArea(a.area)} m²</b><span>${a.commercial ? t('commercial') : t('roomsN', { n: a.rooms })} · ${aptMinPrice(fl, a) ? t('priceFrom', { p: fmtMln(aptMinPrice(fl, a)) }) : t('priceOnRequest')}</span></div>${tourFor(a) ? `<button class="btn small gold dt-tour dt-tour-mini" aria-label="${t('tour')}">▶</button>` : ''}<button class="btn small ${tourFor(a) ? 'ghost' : 'gold'} dt-more">${t('more')}</button></div>
-      ${tourFor(a) ? `<button class="dt-tour-hero dt-tour"><span class="pl">▶</span><span><b>${t('tour')}</b><small>${t('tourHint')}</small></span></button>` : ''}
+      <div class="dt-mini"><div><b>${fmtArea(a.area)} m²</b><span>${a.commercial ? t('commercial') : t('roomsN', { n: a.rooms })} · ${aptMinPrice(fl, a) ? t('priceFrom', { p: fmtMln(aptMinPrice(fl, a)) }) : t('priceOnRequest')}</span></div><button class="btn small gold dt-more">${t('more')}</button></div>
       <div class="dt-area"><b>${fmtArea(a.area)}</b><span>m²</span>${a.areaT ? `<em>${t('areaTer')}: ${fmtArea(a.areaT)} m²</em>` : ''}</div>
       ${a.commercial ? '' : `<div class="dt-stats">
         <div><b>${rooms.filter((r) => r.n === 'bedroom').length}</b><span>${t('statBed')}</span></div>
@@ -263,13 +259,6 @@ export function createUI(data, cb) {
     box.querySelector('.dt-back').addEventListener('click', () => selectApt(null));
     box.querySelector('.dt-plan').addEventListener('click', () => openPlan());
     box.querySelector('.dt-tower').addEventListener('click', () => cb.onBack());
-    box.querySelectorAll('.dt-tour').forEach((b) => b.addEventListener('click', () => player.open(tourFor(a))));
-    const chip = document.getElementById('tour-chip');
-    if (chip) {
-      const tr = tourFor(a);
-      chip.hidden = !tr;
-      chip.onclick = tr ? () => player.open(tr) : null;
-    }
     box.querySelector('.dt-more').addEventListener('click', () => setExpanded(true));
     box.querySelectorAll('.pl-tab').forEach((b) => b.addEventListener('click', () => { state.plan = +b.dataset.plan; renderApt(a); }));
   }
@@ -319,10 +308,24 @@ export function createUI(data, cb) {
     else if (state.floor) cb.onBack();
   });
 
+  // ---------------------------------------------------------------- time widget
+  const slider = $('#time-slider');
+  const liveBtn = $('#time-live');
+  slider.addEventListener('input', () => cb.onTime(+slider.value, false));
+  liveBtn.addEventListener('click', () => cb.onTime(null, true));
+  function setClock(minutes, phase, live) {
+    $('#time-clock').textContent = fmtClock(minutes);
+    $('#time-phase').textContent = t(phase);
+    $('#time-phase').dataset.phase = phase;
+    if (document.activeElement !== slider) slider.value = Math.round(minutes);
+    liveBtn.classList.toggle('on', live);
+    document.body.dataset.phase = phase;
+  }
+
   applyTexts();
 
   return {
-    state, setHoverFloor, showTip, hideTip, floorTipHTML, aptTipHTML, openFloor, closeFloor, selectApt,
+    state, setHoverFloor, showTip, hideTip, floorTipHTML, aptTipHTML, openFloor, closeFloor, selectApt, setClock,
     highlightApt(id) {
       document.querySelectorAll('.apt-card').forEach((c) => c.classList.toggle('hl', c.dataset.id === id));
       viewer.highlight(id);

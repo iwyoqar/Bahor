@@ -9,7 +9,7 @@ Bahor turar-joy majmuasi uchun interaktiv 3D sayt.
 - **Kamera.** Bino bitta burchakdan ko'rsatiladi, aylantirib bo'lmaydi. Faqat yaqinlashtirish va uzoqlashtirish mumkin, bunda ham cheklangan masofada. Yaqinlashtirish sichqoncha turgan joyga qarab bo'ladi.
 - **Xonadon kartochkasi.** Xonalar ro'yxati va ularning maydoni, umumiy maydon (8–9-qavatlarda terrasa bilan birga), narx kalkulyatori: 30% / 50% boshlang'ich to'lov yoki to'liq to'lov, 6 oyga bo'lib to'lash.
 - **2D reja.** Vektor sxema yoki asl chizma (PDF'dan), kattalashtirish va surish mumkin.
-- **Fotorealistik bosh ko'rinish.** Kompyuterda bosh ko'rinish AI render (`assets/hero/`), qavat yoritilishi va bosish 3D modeldan olinib, render ustiga aniq tushadi. Yaqinlashtirish rasm bilan birga ishlaydi. Qavatga kirilganda sayt silliq 3D'ga o'tadi. Yorug'lik doim kunduzgi (`CONFIG.fixedTime`).
+- **Kun vaqti.** Quyosh holati Toshkent vaqti bo'yicha hisoblanadi. Tunda derazalar, ko'cha chiroqlari, mashina faralari yonadi, osmonda yulduzlar chiqadi. Vaqtni slayder bilan ham o'zgartirish mumkin.
 - O'zbek va rus tillari, galereya.
 - **Telefonda** qavat ochilganda pastda ixcham panel chiqadi (qavat nomi va xonadonlar qatori), 3D ko'rinib turadi. To'liq narxlar va ro'yxat panelni yuqoriga surish yoki «Batafsil» tugmasi bilan ochiladi.
 
@@ -41,14 +41,6 @@ Sayt GitHub Pages'da: https://iwyoqar.github.io/Bahor/ (`gh-pages` branchidan). 
 
 Asosiy ko'rinishni AI render bilan almashtirish bo'yicha qo'llanma va promptlar: [docs/ai-render.md](docs/ai-render.md). Render uchun xom suratlar `?capture=1&t=750&pr=2` rejimida olinadi (interfeyssiz, qotirilgan kamera burchagidan).
 
-## Bino atrofida 360° aylanish
-
-Bosh ko'rinishda binoni tortib aylantirish (kompyuter va telefon): fotoreal kadrlar ketma-ketligi, ustida 3D'dan olingan qavat yoritilishi. Tayyorlash bo'yicha qo'llanma va promptlar: [docs/orbit-360.md](docs/orbit-360.md). `assets/orbit/` da fotoreal kadrlar (Nano Banana suratlari + Kling kliplari) turadi, aylanish yoqilgan (`CONFIG.orbit.enabled`); o'chirish uchun `?orbit=0`.
-
-## Qavatlarning fotoreal suratlari
-
-Qavat tanlanganda 3D kesim o'rniga shu qavatning 4K fotoreal surati ochiladi (`assets/floors/`): surish, yaqinlashtirish, ustida xonadonlar yoritilishi va raqamlari. Qo'llanma va prompt: [docs/floor-photos.md](docs/floor-photos.md).
-
 ## Narx va aloqa ma'lumotlarini o'zgartirish
 
 Hammasi `js/config.js` faylida:
@@ -60,8 +52,7 @@ Hammasi `js/config.js` faylida:
 | `phone`, `phoneHref` | «Qo'ng'iroq qilish» tugmasi uchun telefon raqami |
 | `parkingPrice` | Parking joyi narxi |
 | `commercialPriceOnRequest` | 1-qavatdagi tijorat maydonlari uchun narxni «so'rov bo'yicha» ko'rsatish |
-| `location`, `facadeAzimuth`, `fixedTime` | Quyosh hisobi: joylashuv, asosiy fasad yo'nalishi (180 = janub), kunduzgi sana va vaqt |
-| `hero.desktop` | Bosh ko'rinishdagi fotorender fayli |
+| `location`, `facadeAzimuth` | Quyosh hisobi uchun joylashuv va asosiy fasad yo'nalishi (180 = janub) |
 | `floorHeights` | Qavat balandliklari (m) |
 
 Narxlar ro'yxatida (prays-list) 3, 4, 5-qavatlar ko'rsatilmagan. Shu sababli ularda hozircha «Narxi so'rov bo'yicha» yozuvi chiqadi. Narxlarni `prices` ga qo'shsangiz, ular darhol ko'rinadi.

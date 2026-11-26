@@ -20,9 +20,7 @@
   }
   </script>
 </head>
-<body>
-  <div id="hero"><canvas id="hero-bg" width="96" height="54"></canvas><img id="hero-photo" alt="Bahor turar-joy majmuasi" decoding="async"><canvas id="hero-orbit"></canvas></div>
-  <div id="plate"><img id="plate-img" alt="" draggable="false"></div>
+<body data-phase="day">
   <div id="scene"></div>
   <div id="labels"></div>
 
@@ -69,15 +67,19 @@
     <div class="fp-detail" id="fp-detail"></div>
   </section>
 
-  <button id="tour-chip" class="tour-chip" hidden><span>▶</span><b data-t="tour"></b></button>
   <div id="tooltip" role="tooltip"></div>
 
-  <div id="hint"><span class="dot"></span><span id="hint-text"></span></div>
-  <div id="orbit-ctl">
-    <button id="orbit-prev" aria-label="chapga aylantirish">‹</button>
-    <span>360°</span>
-    <button id="orbit-next" aria-label="o'ngga aylantirish">›</button>
+  <div id="time-widget">
+    <div class="tw-top">
+      <div class="tw-clock" id="time-clock">--:--</div>
+      <div class="tw-phase" id="time-phase"></div>
+      <button class="tw-live" id="time-live"><i></i><span data-t="live"></span></button>
+    </div>
+    <input type="range" id="time-slider" min="0" max="1439" step="5" value="720" aria-label="time">
+    <div class="tw-scale"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
   </div>
+
+  <div id="hint"><span class="dot"></span><span id="hint-text"></span></div>
 
   <div class="cta">
     <div class="cta-parking"><small data-t="parkingPrice"></small><b id="parking-price"></b></div>
@@ -98,17 +100,6 @@
     </div>
     <div id="plan-host"></div>
     <div class="pm-foot" data-t="zoomHint"></div>
-  </div>
-
-  <div id="tour" class="modal" aria-label="video tour">
-    <video muted playsinline webkit-playsinline preload="auto"></video><video muted playsinline webkit-playsinline preload="auto"></video>
-    <div class="tour-wait" id="tour-wait"><i></i></div>
-    <button class="tour-play" id="tour-play" hidden aria-label="play">▶</button>
-    <div class="tour-top">
-      <div><div class="tour-title" id="tour-title"></div><div class="tour-note" id="tour-note"></div></div>
-      <button class="icon-btn" id="tour-close" aria-label="close">✕</button>
-    </div>
-    <div class="tour-chapters" id="tour-chapters"></div>
   </div>
 
   <div id="gallery-modal" class="modal">

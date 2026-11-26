@@ -14,24 +14,6 @@ export const CONFIG = {
   location: { lat: 41.3111, lon: 69.2797, tz: 5, tzName: 'Asia/Tashkent' },
   // Asosiy (А o'qi bo'yidagi) fasad qaysi tomonga qaragan, gradusda: 180 = janub
   facadeAzimuth: 180,
-  // Sayt doim kunduzgi yorug'likda: quyosh holati shu sana va vaqt bo'yicha (Toshkent vaqti)
-  fixedTime: { y: 2026, m: 4, d: 15, minutes: 11 * 60 },
-
-  // Bosh ko'rinish uchun fotorealistik render (kompyuter). Kamera burchagi o'zgarsa, qayta yaratiladi.
-  hero: { desktop: 'assets/hero/hero-desktop.jpg', aspect: 16 / 9 },
-
-  // Bino atrofida 360° aylanish (kompyuter): assets/orbit/ dagi kadrlar ketma-ketligi, 0-kadr = bosh ko'rinish.
-  // frames — kadrlar soni (0000.webp ...), stops — to'xtash nuqtalari (qavat yoritilishi shu burchaklarda aniq tushadi),
-  // stills — to'xtash nuqtalari uchun tiniq suratlar bor-yo'qligi (still-1.jpg ...; 0-nuqta — hero surati).
-  // enabled: false bo'lsa ham ?orbit=1 bilan sinab ko'rish mumkin. Qo'llanma: docs/orbit-360.md
-  // Qavatning fotoreal surati (qavat tanlanganda 3D kesim o'rniga): bitta kamera, kvadrat kadr.
-  // Kamera qavat markazidan dir yo'nalishida dist masofada, fov — vertikal ko'rish burchagi.
-  // floors — surati tayyor qavatlar (assets/floors/floor-N.jpg). Qo'llanma: docs/floor-photos.md
-  floorPhoto: { dir: 'assets/floors', ext: 'jpg', cam: [8, 150, 82], dist: 200, fov: 40,
-    bbox: [0.22, 0.33, 0.78, 0.69],   // bino suratning qaysi qismida (birinchi ko'rinish shu qismni ekranga sig'diradi)
-    floors: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
-
-  orbit: { enabled: true, dir: 'assets/orbit', frames: 160, ext: 'webp', stops: 8, stills: true, degPerPx: 0.22 },
 
   // Narxlar: 1 m² uchun, so'mda. 6 oylik muddatli to'lov.
   // Kalit — boshlang'ich to'lov ulushi (%). 100 = to'liq to'lov.
@@ -52,22 +34,6 @@ export const CONFIG = {
   // Tijorat maydonlari (1-qavat) narxi narxlar ro'yxatida alohida ko'rsatilmagan
   commercialPriceOnRequest: true,
   parkingPrice: 150000000,
-
-  // Namunaviy xonadonlar bo'ylab video sayohat (Google Flow / Veo videolari).
-  // Kalit — namunaviy xonadon; shu rejadagi boshqa qavatlardagi xonadonlarda ham tugma chiqadi.
-  // Video qo'shish: faylni assets/tour/<id>/ ga qo'ying va clips ga yozing. Bo'sh ro'yxat — tugma yo'q.
-  tours: {
-    '6-21': { title: '3 xonali · 123 m²', clips: [
-      // key — klip qaysi xonada tugaydi (bo'lim nomi shundan olinadi)
-      { key: 'flight', src: 'assets/tour/6-21/flight.mp4', poster: 'assets/hero/hero-desktop-1280.jpg' },   // binodan mehmonxonaga
-      { from: 'living', key: 'hall', src: 'assets/tour/6-21/living-hall.mp4', poster: 'assets/tour/6-21/living.jpg' },
-      { from: 'hall', key: 'kitchen', src: 'assets/tour/6-21/hall-kitchen.mp4', poster: 'assets/tour/6-21/hall.jpg' },
-      { from: 'kitchen', key: 'bedroom', src: 'assets/tour/6-21/kitchen-bedroom.mp4', poster: 'assets/tour/6-21/kitchen.jpg' },
-      { from: 'bedroom', key: 'bath', src: 'assets/tour/6-21/bedroom-bath.mp4', poster: 'assets/tour/6-21/bedroom.jpg' },
-    ] },
-    '6-20': { title: '2 xonali · 84 m²', clips: [] },
-    '6-19': { title: '1 xonali · 53 m²', clips: [] },
-  },
 
   // Bino geometriyasi (metr)
   plinth: 0.45,
